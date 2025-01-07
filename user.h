@@ -45,6 +45,27 @@
 #define FAIL 1
 #define PASS 0
 
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof(array[0]))
+
+//============Define  Flag=================
+typedef union
+{
+	unsigned char byte;
+	struct
+	{
+		u8 bit0 : 1;
+		u8 bit1 : 1;
+		u8 bit2 : 1;
+		u8 bit3 : 1;
+		u8 bit4 : 1;
+		u8 bit5 : 1;
+		u8 bit6 : 1;
+		u8 bit7 : 1;
+	} bits;
+} bit_flag;
+volatile bit_flag flag1;
+volatile bit_flag flag2;
+
 #define USE_MY_DEBUG 0
 
 // 使用的芯片/仿真板:
@@ -90,6 +111,28 @@
 #define LED_RED	  // 红灯
 #define LED_GREEN // 绿灯
 #define LED_BLUE  // 蓝灯
+// ===================================================
+// 低电量相关配置                                    //
+// ===================================================
+#define LOW_BATTERY_AD_VAL (3055) // 低电量对应的ad值 (3055,对应7V)
+
+// ===================================================
+// 充电相关配置                                      //
+// ===================================================
+// #define TMP_BAT_VAL_FIX                 33  // 额外固定增益
+// struct tmp_bat_val_fix
+// {
+//     u16 adc_bat_val;
+//     u8 tmp_bat_val_fix;
+// }; 
+// struct tmp_bat_val_fix bat_val_fix_table[] = {
+//     // table内每增减一项，对应会增减4个字节
+//     // { 2619, TMP_BAT_VAL_FIX + 37 },  // 6.0V
+//     { 2837, TMP_BAT_VAL_FIX + 37 },  // 6.5V
+//     { 3056, TMP_BAT_VAL_FIX + 27 },  // 7.0V
+//     { 3188, TMP_BAT_VAL_FIX + 16 },  // 7.3V
+//     { 3326, TMP_BAT_VAL_FIX + 0  },  // 7.62V
+// };
 
 // ===================================================
 // 机械按键相关配置                                  //
@@ -219,7 +262,7 @@ volatile u8 flag_bat_is_empty; // 标志位，用于检测是否拔出了电池
 
 volatile u16 tmp_bat_val;	   // 存放检测到的电池电压+计算的压差对应的adc值
 volatile u8 over_charging_cnt; // 在充电时，检测电池是否满电的计数值
-volatile u32 full_charge_cnt;  // 检测到充满电后，进行计数的变量
+volatile u8 full_charge_cnt;  // 检测到充满电后，进行计数的变量
 //
 
 
@@ -227,24 +270,7 @@ volatile u32 full_charge_cnt;  // 检测到充满电后，进行计数的变量
 u8 abuf;
 u8 statusbuf;
 
-//============Define  Flag=================
-typedef union
-{
-	unsigned char byte;
-	struct
-	{
-		u8 bit0 : 1;
-		u8 bit1 : 1;
-		u8 bit2 : 1;
-		u8 bit3 : 1;
-		u8 bit4 : 1;
-		u8 bit5 : 1;
-		u8 bit6 : 1;
-		u8 bit7 : 1;
-	} bits;
-} bit_flag;
-volatile bit_flag flag1;
-volatile bit_flag flag2;
+
 #define FLAG_IS_DEVICE_OPEN flag1.bits.bit0		// 设备是否开机的标志位，0--未开机，1--开机
 #define FLAG_IS_HEATING flag1.bits.bit1			// 加热是否工作的标志位
 #define FLAG_IS_IN_CHARGING flag1.bits.bit2		// 是否处于充电的标志位
@@ -257,6 +283,8 @@ volatile bit_flag flag2;
 
 #define flag_ctl_device_open flag2.bits.bit0 // 控制标志位，控制打开/关闭设备
 #define flag_ctl_heat_open flag2.bits.bit1 // 控制标志位，控制 加热的 开/关
+
+#define flag_is_low_battery flag2.bits.bit2 // 标志位，是否检测到低电量
 
 // #define flag_key_scan_10ms flag2.bits.bit0 // 标志位,用于按键检测，是否经过了10ms
 
@@ -280,10 +308,10 @@ void delay_ms(u16 xms)
 }
 
 // #if USE_MY_DEBUG
-#define DEBUG_PIN P22D
+#define DEBUG_PIN P16D
 #if 0 // 以下程序约占用81字节空间
 // 通过一个引脚输出数据(发送一次约400ms)
-#define DEBUG_PIN P22D
+// #define DEBUG_PIN P22D
 void send_data_msb(u32 send_data)
 {
 	// 先发送格式头

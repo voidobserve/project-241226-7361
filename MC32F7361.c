@@ -128,26 +128,13 @@ void timer2_pwm_config(void)
 // 按键检测引脚的配置：
 void key_config(void)
 {
-    // 控制是否加热的按键的配置
-#if USE_MY_DEBUG
-    // 由于P13无法参与仿真，这里使用P05
-    P05PU = 1;
-    P05OE = 0;
-#else
-    P13PU = 1; // 上拉
-    P13OE = 0; // 输入模式
-#endif
-    // 开机/关机按键的配置，一定要中断触发：
-    INT0M0 = 1; // INT0M0、INT0M1，组合配置INT0为下降沿中断
-    INT0M1 = 0;
-    P11PU = 1;
-    P11OE = 0;
-    INT0IF = 0; // 清除中断标志
-    INT0IE = 1; // 外部中断使能
+    // 检测加热按键的引脚配置：
+    P11PU = 1; // 上拉
+    P11OE = 0; // 输入模式
 
-    // 切换模式按键的配置
-    P01PU = 1;
-    P01OE = 0;
+    // 检测 开关机/模式切换 按键的引脚 配置 ：
+    P01PU = 1; // 上拉
+    P01OE = 0; // 输入模式
 }
 
 // 切换adc检测的引脚
@@ -282,7 +269,6 @@ void Sys_Init(void)
 
     key_config();
     adc_config();
-    delay_ms(100); // 等待系统稳定
 
     GIE = 1;
 }
@@ -294,7 +280,7 @@ void key_scan_handle(void)
     {
         // 标志位，用于 开机/模式 按键的长按和松手
         // 0--按键未松手,1--按键已经松手
-        static volatile u8 flag_is_key_mode_hold = 1;
+        static volatile u8 flag_is_key_mode_hold = 0;
         u16 press_cnt = 0;
 
         delay_ms(20); // 延时消抖
@@ -308,37 +294,45 @@ void key_scan_handle(void)
                 if (press_cnt < 65535)
                     press_cnt++;
 
-                if (press_cnt >= 2000)
+                if (0 == FLAG_IS_DEVICE_OPEN)
                 {
-                    // 如果长按了2s
-                    // 如果之前检测到没有按下该按键，才进入：
-                    if (0 == flag_is_key_mode_hold)
+                    if (press_cnt >= 1000) // 1000ms加上看门狗唤醒的1024ms
                     {
-                        flag_is_key_mode_hold = 1; // 表示按键按下后未松手
-  
-                        if (0 == FLAG_IS_DEVICE_OPEN &&
-                            // 0 == FLAG_IS_IN_CHARGING &&
-                            0 == FLAG_IS_NOT_OPEN_DEVICE)
+                        // 如果长按了2s
+                        // 如果之前检测到没有按下该按键，才进入：
+                        if (0 == flag_is_key_mode_hold)
                         {
+                            flag_is_key_mode_hold = 1; // 表示按键按下后未松手
+
                             // 如果未开机，
                             // 电池电压大于 xxV 允许开机，关机->开机
-                            LED_WORKING_ON(); // 打开电源指示灯
-                            // HEATING_ON();     // 打开加热
+                            LED_FULL_CHARGE_OFF(); // 关闭满电指示灯
+                            LED_CHARGING_OFF();    // 关闭充电指示灯
+                            LED_WORKING_ON();      // 打开电源指示灯
                             FLAG_IS_DEVICE_OPEN = 1;
-                            // FLAG_IS_HEATING = 1;
 
                             // 设定正转、反转的PWM的初始占空比
-                            T0DATA = 115;
-                            T1DATA = 115; // 约为 89.9%
-                            // T0DATA = 103;
-                            // T1DATA = 103;       // 约为 80.5%
+                            // T0DATA = 115;
+                            // T1DATA = 115; // 约为 89.9%
+                            T0DATA = 103;
+                            T1DATA = 103;       // 约为 80.5%
                             mode_flag = MODE_1; // 下一次切换模式时，会变成 MODE_2
 
                             // 打开控制正转的PWM
                             PWM0EC = 1;
+                            break;
                         }
-                        else
+                    }
+                }
+                else // 如果当前设备是开启的
+                {
+                    if (press_cnt >= 2000)
+                    {
+                        // 如果之前检测到没有按下该按键，才进入：
+                        if (0 == flag_is_key_mode_hold)
                         {
+                            flag_is_key_mode_hold = 1; // 表示按键按下后未松手
+
                             // 开机->关机
                             LED_WORKING_OFF(); // 关闭电源指示灯
                             HEATING_OFF();     // 关闭加热
@@ -350,12 +344,14 @@ void key_scan_handle(void)
                             // 关闭 正转和反转的PWM
                             PWM0EC = 0;
                             PWM1EC = 0;
+
+                            break;
                         }
                     }
                 }
 
                 delay_ms(1);
-            }
+            } // while (0 == KEY_MODE_PIN) 等待按键松手
 
             flag_is_key_mode_hold = 0; // 表示该按键已经松手
 
@@ -364,31 +360,31 @@ void key_scan_handle(void)
                 // 如果是短按
                 if (FLAG_IS_DEVICE_OPEN)
                 {
-                    // 初始为 89.9%占空比，每按一次 从 89.9%->100%->80.5%->89.9%->...这样变化
+                    // 初始为 80.5%占空比，每按一次 从 80.5%->89.9%->100%->80.5%->...这样变化
                     if (FLAG_IS_DEVICE_OPEN)
                     {
                         // 如果开机，才切换模式
                         if (MODE_1 == mode_flag)
                         {
                             // 设置PWM的占空比
-                            T0DATA = 255;
-                            T1DATA = 255; // 100%占空比（确保大于TxLOAD的值就可以）
+                            T0DATA = 115;
+                            T1DATA = 115; // 89.9%占空比
 
                             mode_flag = MODE_2;
                         }
                         else if (MODE_2 == mode_flag)
                         {
                             // 设置PWM的占空比
-                            T0DATA = 103;
-                            T1DATA = 103; // 80.5%占空比
+                            T0DATA = 255;
+                            T1DATA = 255; // 100%占空比（确保大于TxLOAD的值就可以）
 
                             mode_flag = MODE_3;
                         }
                         else if (MODE_3 == mode_flag)
                         {
                             // 设置PWM的占空比
-                            T0DATA = 115;
-                            T1DATA = 115; // 89.9%占空比
+                            T0DATA = 103;
+                            T1DATA = 103; // 80.5%占空比
                             mode_flag = MODE_1;
                         }
                     }
@@ -416,7 +412,7 @@ void key_scan_handle(void)
             {
                 // 如果是短按
                 if (FLAG_IS_DEVICE_OPEN)
-                {  
+                {
                     // 如果设备已经处于工作状态，才可以打开加热
                     if (0 == FLAG_IS_HEATING)
                     {
@@ -449,15 +445,7 @@ void adc_scan_handle(void)
 
         if (i == 0)
         {
-            if (adc_bat_val != 0)
-            {
-                adc_bat_val += adc_val;
-                adc_bat_val /= 2;
-            }
-            else
-            {
-                adc_bat_val += adc_val;
-            }
+            adc_bat_val = adc_val;
         }
 
         if (FLAG_IS_IN_CHARGING)
@@ -494,16 +482,23 @@ void adc_scan_handle(void)
             else if (cnt >= 8 || over_charging_cnt >= 8)
             {
                 // 如果在充电时，电池之前需要充电，现在检测到充满电
-
                 full_charge_cnt++;
-
                 if (full_charge_cnt >= 100 || over_charging_cnt >= 8) // 5.5s或者是连续触发了若干次过充保护
                 {
                     full_charge_cnt = 0; //
-                    // LED_FULL_CHARGE_ON(); // 开启电池充满电的指示灯
-                    LED_CHARGING_OFF(); // 关闭充电指示灯
-                    LED_WORKING_ON();   // 开启工作指示灯（蓝灯常亮）
-                    PWM2EC = 0;         // 关闭控制升压电路的pwm
+
+                    if (FLAG_IS_DEVICE_OPEN)
+                    {
+                    }
+                    else
+                    {
+                        // 设备不工作时，才打开对应的指示灯:
+                        LED_CHARGING_OFF(); // 关闭充电指示灯
+                        // LED_WORKING_ON();   // 开启工作指示灯（蓝灯常亮）
+                        LED_FULL_CHARGE_ON(); // 开启电池充满电的指示灯
+                    }
+
+                    PWM2EC = 0; // 关闭控制升压电路的pwm
                     T2DATA = 0;
                     // FLAG_IS_IN_CHARGING = 0; // 不能给这个标志位清零（交给充电扫描来清零）
                     FLAG_BAT_IS_NEED_CHARGE = 0;
@@ -535,6 +530,14 @@ void adc_scan_handle(void)
                 FLAG_BAT_IS_NEED_CHARGE = 1;
                 FLAG_BAT_IS_FULL = 0;
                 break;
+            }
+
+            // 检测电池是否处于低电量：
+            if (flag_bat_is_empty == 0 &&
+                FLAG_IS_DEVICE_OPEN &&
+                adc_val < LOW_BATTERY_AD_VAL)
+            {
+                flag_is_low_battery = 1;
             }
         }
     } // for (i = 0; i < 10; i++)
@@ -574,11 +577,29 @@ void adc_scan_handle(void)
                 PWM2EC = 0;         // 关闭控制升压电路的pwm
                 T2DATA = 0;
                 LED_FULL_CHARGE_OFF(); // 关闭电池充满电的指示灯
-                LED_WORKING_OFF();     // 关闭工作状态指示灯（关闭蓝灯） =====================================
+                // LED_WORKING_OFF();     // 关闭工作状态指示灯（关闭蓝灯） =====================================
                 FLAG_IS_IN_CHARGING = 0;
                 FLAG_DURING_CHARGING_BAT_IS_NULL = 0; // 清空该标志位，因为已经不在充电的情况下
                 break;
             } // if (cnt >= 8)
+
+            if (FLAG_IS_DEVICE_OPEN)
+            {
+
+            }
+            else 
+            {
+                // 如果设备未开启
+                if (FLAG_BAT_IS_FULL)
+                {
+                }   
+                else
+                {
+                    // 如果未满电
+                    LED_FULL_CHARGE_OFF();
+                    LED_CHARGING_ON();
+                }
+            }
         } // if (FLAG_IS_IN_CHARGING)
         else
         {
@@ -615,8 +636,16 @@ void adc_scan_handle(void)
                 full_charge_cnt = 0;
                 over_charging_cnt = 0;
 
-                LED_CHARGING_ON(); // 开启充电指示灯
-                PWM2EC = 1;        // 开启控制升压电路的pwm
+                if (FLAG_IS_DEVICE_OPEN)
+                {
+                }
+                else
+                {
+                    // 设备不工作时，才打开该指示灯
+                    LED_CHARGING_ON(); // 开启充电指示灯
+                }
+
+                PWM2EC = 1; // 开启控制升压电路的pwm
                 FLAG_IS_IN_CHARGING = 1;
                 break;
             } // if (cnt >= 8)
@@ -690,6 +719,11 @@ void shutdown_scan_handle(void)
 
 void low_power_scan_handle(void)
 {
+    if (FLAG_DURING_CHARGING_BAT_IS_NULL) // 只插着充电器且没有电池时，不进入低功耗
+    {
+        return;
+    }
+
     if (FLAG_IS_DEVICE_OPEN)
     {
         // 如果设备已经启动，不进入低功耗
@@ -700,14 +734,12 @@ void low_power_scan_handle(void)
     // 可能需要考虑正在充电的情况
     if (FLAG_IS_IN_CHARGING)
     {
-        // 如果正在充电，不进入低功耗，因为可能还需要输出PWM来控制充电
+        // 如果正在充电，不进入低功耗，因为还需要输出PWM来控制充电
         return;
     }
 
 label:
-    GIE = 0; // 禁用所有中断
-    // KBIF = 0;
-    // KBIE = 1; // 使能键盘中断
+    GIE = 0;  // 禁用所有中断
     T0EN = 0; // 关闭定时器和PWM输出
     T1EN = 0;
     T2EN = 0;
@@ -719,35 +751,18 @@ label:
     T2DATA = 0;
     ADEN = 0; // 不使能ad
 
-    // IO全部变为输出模式，输出低电平，LED脚全部输出高电平，不点亮LED ：
-    IOP0 = 0x18;   // io口数据位
-    OEP0 = 0xFF;   // io口方向 1:out  0:in
-    PUP0 = 0x00;   // io口上拉电阻   1:enable  0:disable
-    PDP0 = 0x00;   // io口下拉电阻   1:enable  0:disable
-    P0ADCR = 0x00; // 端口的数字功能    1：disable
-    IOP1 = 0x10;   // io口数据位
-    OEP1 = 0xFF;   // io口方向 1:out  0:in
-    PUP1 = 0x00;   // io口上拉电阻   1:enable  0:disable
-    PDP1 = 0x00;   // io口下拉电阻   1:enable  0:disable
-    P1ADCR = 0x00; // 端口的数字功能    1：disable
+    // LED脚配置为输入模式：
+    P14OE = 0;
+    P04OE = 0;
+    P03OE = 0;
 
-    // 开机/关机按键的配置，一定要中断触发：
-    // INT0M0 = 1; // INT0M0、INT0M1，组合配置INT0为下降沿中断
-    // INT0M1 = 0;
-    // P11PU = 1;
-    // P11OE = 0;
-
-    // 开关/模式按键的配置，配置为输入上拉，通过键盘中断触发
+    // 开关/模式按键的配置，配置为输入上拉
     P01PU = 1;
     P01OE = 0;
-    P01KE = 1;
-    KBIF = 0;
-    KBIE = 1;
 
-    // 配置充电检测引脚，通过键盘中断触发
+    // 配置充电检测引脚
     P00PD = 1;
     P00OE = 0;
-    P00KE = 1;
 
     HFEN = 0; // 关闭高速时钟
     LFEN = 1;
@@ -759,25 +774,14 @@ label:
     Nop();
     Nop();
 
-    P01KE = 0; // 关闭 开关/模式按键的键盘中断
-    P00KE =0 ; // 关闭充电检测引脚的键盘中断
-    KBIE = 0; // 不使能键盘中断
-    KBIF = 0;
+    HFEN = 1; // 开启高速时钟
     // 唤醒后，重新初始化
     CLR_RAM();
-    // adc_config();
 
-    P00PU = 0; // 关闭上下拉
-    P00PD = 0;
-    P00OE = 0;    // 输入模式
-    P00DC = 1;    // 模拟输入
-    ADCR1 = 0xE1; // 125K采样（最高精度）  内部3V参考电压
-    ADCR2 = 0xFF; // ADC采样时间为15个ADC时钟
-    ADEN = 1;     // 使能ADC
-
+    adc_config();
     adc_sel_pin(ADC_PIN_P00_AN0);
     adc_val = adc_get_val_once();
-    if (adc_val < ADCDETECT_CHARING_THRESHOLD && P11D) // 如果按下开机按键/插入充电器，不会满足条件
+    if (adc_val < ADCDETECT_CHARING_THRESHOLD && P01D) // 如果按下开机按键/插入充电器，不会满足条件
     {
         // 如果没有按下开机按键、没有插入充电器
         // 关闭ADC，继续进入休眠：
@@ -785,12 +789,12 @@ label:
         goto label;
     }
 
-    P02PU = 0; // 关闭上下拉
-    P02PD = 0;
-    P02OE = 0; // 输入模式
-    P02DC = 1; // 模拟输入
-    adc_sel_pin(ADC_PIN_P02_AN1);
-    adc_val = adc_get_val();
+    // P02PU = 0; // 关闭上下拉
+    // P02PD = 0;
+    // P02OE = 0; // 输入模式
+    // P02DC = 1; // 模拟输入
+    // adc_sel_pin(ADC_PIN_P02_AN1);
+    // adc_val = adc_get_val();
     // if (adc_val < ADCVAL_REF_BAT_6_0_V)
     // {
     //     // 如果电池电量过低，不开机，但是可以充电
@@ -801,38 +805,16 @@ label:
     //     FLAG_IS_NOT_OPEN_DEVICE = 0;
     // }
 
-    FLAG_IS_NOT_OPEN_DEVICE = 0;
+    // FLAG_IS_NOT_OPEN_DEVICE = 0;
 
-    HFEN = 1; // 开启高速时钟
-
-#if 0
-    IOP0 = 0x18;   // io口数据位
-    OEP0 = 0xFF;   // io口方向 1:out  0:in
-    PUP0 = 0x00;   // io口上拉电阻   1:enable  0:disable
-    PDP0 = 0x00;   // io口下拉电阻   1:enable  0:disable
-    P0ADCR = 0x00; // 端口的数字功能    1：disable
-    IOP1 = 0x10;   // io口数据位
-    OEP1 = 0xFF;   // io口方向 1:out  0:in
-    PUP1 = 0x00;   // io口上拉电阻   1:enable  0:disable
-    PDP1 = 0x00;   // io口下拉电阻   1:enable  0:disable
-    P1ADCR = 0x00; // 端口的数字功能    1：disable
-    PMOD = 0x07;   // bit7-bit5 P17、P13、P01 io类型选择 1:模拟输入  0:通用io
-                   // bit2-bit0 P13、P01、P00 io端口输出模式  1:推挽输出 0:开漏输出
-    DRVCR = 0x80;  // 普通驱动
-    timer0_pwm_config(); 
-    timer1_pwm_config();
-    timer2_pwm_config();
-    // timer3_config();
-    key_config();
-    adc_config();
-#endif
     Sys_Init();
 
     LED_WORKING_OFF();
     LED_FULL_CHARGE_OFF();
     LED_CHARGING_OFF();
     GIE = 1;
-    // 唤醒后使能外设关闭键盘中断，实际应用用户按需配置
+
+    delay_ms(100); // 等待系统稳定
 }
 
 void main(void)
@@ -844,11 +826,13 @@ void main(void)
     LED_FULL_CHARGE_OFF();
     LED_CHARGING_OFF();
 
+    delay_ms(100); // 等待系统稳定
+
     // flag_bat_is_empty = 0; // （可以优化掉，上电默认就是0）
 
     // 上电时检测电池是否正确安装:
     PWM2EC = 1; // 打开控制升压电路的pwm
-    T2DATA = 20;
+    T2DATA = 100;
     adc_sel_pin(ADC_PIN_P02_AN1); // 切换到检测电池降压后的电压的检测引脚
     for (i = 0; i < 10; i++)      // 每55ms进入一次，循环内每次间隔约4.8ms
     {
@@ -864,6 +848,20 @@ void main(void)
 
     while (1)
     {
+        // 测试 指示灯 是否工作正常，是否正确焊接：
+        // LED_FULL_CHARGE_ON(); // G
+        // delay_ms(500);
+        // LED_FULL_CHARGE_OFF();
+        // delay_ms(500);
+        // LED_CHARGING_ON(); // R
+        // delay_ms(500);
+        // LED_CHARGING_OFF();
+        // delay_ms(500);
+        // LED_WORKING_ON(); // B
+        // delay_ms(500);
+        // LED_WORKING_OFF();
+        // delay_ms(500);
+
 #if 1
         // DEBUG_PIN = ~DEBUG_PIN; // 测试主循环是否正常
 
@@ -895,6 +893,7 @@ void main(void)
                 转换成单片机可以计算的形式：压差 = 203 - (充电时的电池电压 * 122 / 1000)
             */
 
+#if 1
             if (adc_bat_val < 2619) // 如果在充电时检测到电池电压小于6.0V
             {
                 // tmp_bat_val = (u32)adc_bat_val + (294 - (u32)adc_bat_val * 157 / 1000);
@@ -903,7 +902,6 @@ void main(void)
             }
             else if (adc_bat_val <= 2837) // 如果检测电池电压小于 6.5V
             {
-
                 tmp_bat_val = (adc_bat_val + 37);
             }
             else if (adc_bat_val <= 3056) // 如果检测电池电压小于 7.0V
@@ -937,14 +935,40 @@ void main(void)
 
             // tmp_bat_val += 30;
             // tmp_bat_val += 32;
-            // tmp_bat_val += 52; //  
-
+            // tmp_bat_val += 52; //
             // tmp_bat_val += 33; // 1.3A(7361芯片)
-            tmp_bat_val += 27; //  
-            // tmp_bat_val += 39; // 在 tmp_bat_val+= 27 和 tmp_bat_val += 51 取中间值
-            // tmp_bat_val += 51; // 在 tmp_bat_val += 27 的基础上加一级pwm_val
 
-            // tmp_bat_val = (adc_bat_val + 0);
+            // 用7351芯片,充电电流 0.89-0.90A
+            // 7361,0.83-0.84A
+            // tmp_bat_val += 27; //
+
+            // 7361,0.84-0.85A
+            // tmp_bat_val += 30;
+
+            // 7361,0.9A
+            // tmp_bat_val += 33;
+
+            // 7361,0.95A
+            // tmp_bat_val += 40;
+
+            // 7361,0.98A-1.0A
+            tmp_bat_val += 55;
+
+#endif
+
+            // for (i = 0; i < ARRAY_SIZE(bat_val_fix_table); i++)
+            // {
+            //     if (adc_bat_val < bat_val_fix_table[i].adc_bat_val)
+            //     {
+            //         tmp_bat_val = (adc_bat_val + bat_val_fix_table[i].tmp_bat_val_fix);
+            //         break;
+            //     }
+
+            //     if (i == (ARRAY_SIZE(bat_val_fix_table) - 1))
+            //     {
+            //         tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 522) + TMP_BAT_VAL_FIX;
+            //     }
+            // }
 
             /*
                 升压公式：Vo = Vi / (1 - D)
@@ -984,19 +1008,13 @@ void main(void)
 
             // 滤波操作，一开始tmp_val会很小，采集多次后趋于一个平均值：
             tmp_val_cnt++;
-            if (tmp_val_cnt >= 8)
-                tmp_val_cnt = 0;
-            tmp_val_l[tmp_val_cnt] += tmp_val;
-            tmp_val_l[tmp_val_cnt] >>= 1;
+            tmp_val_cnt &= 0x07;
+            tmp_val_l[tmp_val_cnt] = (tmp_val_l[tmp_val_cnt] + tmp_val) >> 1;
             tmp_val = 0;
-            tmp_val += tmp_val_l[0];
-            tmp_val += tmp_val_l[1];
-            tmp_val += tmp_val_l[2];
-            tmp_val += tmp_val_l[3];
-            tmp_val += tmp_val_l[4];
-            tmp_val += tmp_val_l[5];
-            tmp_val += tmp_val_l[6];
-            tmp_val += tmp_val_l[7];
+            for (i = 0; i < 8; i++)
+            {
+                tmp_val += tmp_val_l[i];
+            }
             tmp_val >>= 3;
 
             if (tmp_val > last_pwm_val)
@@ -1022,10 +1040,26 @@ void main(void)
             }
         } // else // 如果未在充电
 
-        if (FLAG_DURING_CHARGING_BAT_IS_NULL == 0) // 只插着充电器且没有电池时，不进入低功耗
-            low_power_scan_handle();
+        if (flag_is_low_battery && FLAG_IS_DEVICE_OPEN)
+        {
+            LED_WORKING_OFF();
 
-            // P10D = 0; // 测试一次循环所需的时间
+            // 工作时检测到低电量
+            LED_CHARGING_ON();
+            delay_ms(200);
+            LED_CHARGING_OFF();
+            delay_ms(200);
+        }
+
+        if (FLAG_IS_DEVICE_OPEN && FLAG_IS_IN_CHARGING)
+        {
+            // 如果工作时，插入了充电器，清除标志位
+            flag_is_low_battery = 0;
+        }
+
+        low_power_scan_handle();
+
+        // P10D = 0; // 测试一次循环所需的时间
 
 #endif
         __asm;
@@ -1049,10 +1083,10 @@ void int_isr(void) __interrupt
     movra _statusbuf;
     __endasm;
     //=======外部中断0(由开关按键触发，该中断只用于唤醒单片机)=================
-    if (INT0IF & INT0IE)
-    {
-        INT0IF = 0;
-    }
+    // if (INT0IF & INT0IE)
+    // {
+    //     INT0IF = 0;
+    // }
 
     // if (T3IF & T3IE)
     // {
