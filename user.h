@@ -79,7 +79,7 @@ volatile bit_flag flag2;
 #define BAT_FIX_VAL (1773 / 1000)
 
 #ifdef BAT_FIX_VAL
-#define ADCDETECT_BAT_FULL (3720) // (2098)
+#define ADCDETECT_BAT_FULL (3720) //  (3720--对应8.52V)
 #define ADCDETECT_BAT_NULL_EX (280)
 #define ADCDETECT_BAT_WILL_FULL (3472) // (1958)
 #define ADCVAL_REF_BAT_6_0_V (2618)	   // (1477)
@@ -119,7 +119,7 @@ volatile bit_flag flag2;
 // ===================================================
 // 充电相关配置                                      //
 // ===================================================
-// #define TMP_BAT_VAL_FIX                 33  // 额外固定增益
+// #define TMP_BAT_VAL_FIX                 55  // 额外固定增益
 // struct tmp_bat_val_fix
 // {
 //     u16 adc_bat_val;
@@ -138,9 +138,7 @@ volatile bit_flag flag2;
 // 机械按键相关配置                                  //
 // ===================================================
 // 检测按键状态的引脚定义，检测到低电平为有效
-// #define KEY_HEAT_PIN P11D	// 控制是否加热的引脚
-// #define KEY_POWER_PIN P11D	// 控制是否工作的引脚
-// #define KEY_CHANGE_PIN P01D // 控制模式的引脚
+ 
 // 定义按键的id
 enum
 {	

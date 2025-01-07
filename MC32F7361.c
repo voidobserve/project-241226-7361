@@ -117,13 +117,13 @@ void timer2_pwm_config(void)
 }
 
 // 定时器3
-// void timer3_config(void)
-// {
-//     T3LOAD = 250 - 1; // FCPU 32分频后，这里是1ms触发一次中断
-//     // T3EN = 1;
-//     T3CR = 0x85; // 使能定时器，时钟源选择FCPU，32分频
-//     T3IE = 1;
-// }
+void timer3_config(void)
+{
+    T3LOAD = 250 - 1; // FCPU 32分频后，这里是1ms触发一次中断
+    // T3EN = 1;
+    T3CR = 0x85; // 使能定时器，时钟源选择FCPU，32分频
+    T3IE = 1;
+}
 
 // 按键检测引脚的配置：
 void key_config(void)
@@ -146,11 +146,23 @@ void adc_sel_pin(u8 adc_pin)
     case ADC_PIN_P00_AN0:
         ADCR0 &= ~(0x0F << 4); // 清空寄存器的通道选择位
         // 清空后的通道就是 AIN0--P00
+        
+        // 下面这种写法更占用程序空间：
+        // ADCHS3 = 0;
+        // ADCHS2 = 0;
+        // ADCHS1 = 0;
+        // ADCHS0 = 0;
         break;
 
     case ADC_PIN_P02_AN1:
         ADCR0 &= ~(0x0F << 4); // 清空寄存器的通道选择位
         ADCR0 |= 0x01 << 4;    // AIN1--P02;
+
+        // 下面这种写法更占用程序空间：
+        // ADCHS3 = 0;
+        // ADCHS2 = 0;
+        // ADCHS1 = 0;
+        // ADCHS0 = 1;
         break;
 
     default:
@@ -265,10 +277,15 @@ void Sys_Init(void)
     timer1_pwm_config();
     timer2_pwm_config();
 
-    // timer3_config();
+    timer3_config();
 
     key_config();
     adc_config();
+
+    // 关闭所有指示灯
+    LED_WORKING_OFF();
+    LED_FULL_CHARGE_OFF();
+    LED_CHARGING_OFF();
 
     GIE = 1;
 }
@@ -320,7 +337,7 @@ void key_scan_handle(void)
 
                             // 打开控制正转的PWM
                             PWM0EC = 1;
-                            break;
+                            // break; // 不能跳出循环，否则会进入 FLAG_IS_DEVICE_OPEN == 1 的条件，又把设备关闭了
                         }
                     }
                 }
@@ -339,13 +356,20 @@ void key_scan_handle(void)
                             FLAG_IS_DEVICE_OPEN = 0;
                             FLAG_IS_HEATING = 0;
 
+                            if (flag_is_low_battery)
+                            {
+                                // 如果关机前处于低电量报警的状态
+                                LED_CHARGING_OFF(); // 关闭用于报警的LED
+                                flag_is_low_battery = 0;
+                            }
+
                             mode_flag = MODE_1; // 下一次切换模式时，会变成 MODE_2
 
                             // 关闭 正转和反转的PWM
                             PWM0EC = 0;
                             PWM1EC = 0;
 
-                            break;
+                            // break; // 不能跳出循环，否则会进入 FLAG_IS_DEVICE_OPEN == 0 的条件，又把设备开启了
                         }
                     }
                 }
@@ -540,6 +564,8 @@ void adc_scan_handle(void)
                 flag_is_low_battery = 1;
             }
         }
+
+        key_scan_handle(); // 按键扫描和处理函数
     } // for (i = 0; i < 10; i++)
 
     cnt = 0;
@@ -585,14 +611,13 @@ void adc_scan_handle(void)
 
             if (FLAG_IS_DEVICE_OPEN)
             {
-
             }
-            else 
+            else
             {
                 // 如果设备未开启
                 if (FLAG_BAT_IS_FULL)
                 {
-                }   
+                }
                 else
                 {
                     // 如果未满电
@@ -650,6 +675,8 @@ void adc_scan_handle(void)
                 break;
             } // if (cnt >= 8)
         }
+
+        key_scan_handle(); // 按键扫描和处理函数
     } // for (i = 0; i < 10; i++)
 }
 
@@ -658,7 +685,7 @@ void turn_dir_scan_handle(void)
     if (FLAG_IS_DEVICE_OPEN)
     {
         // 设备运行时，才开始计时并判断是否要转向
-        turn_dir_ms_cnt += ONE_CYCLE_TIME_MS;
+        // turn_dir_ms_cnt += ONE_CYCLE_TIME_MS;
         if (turn_dir_ms_cnt >= (120000)) // 原本设定是2min
         {
             // 如果大于2min
@@ -694,7 +721,7 @@ void shutdown_scan_handle(void)
     if (FLAG_IS_DEVICE_OPEN)
     {
         // 如果设备开启，开始计时，15min后自动关机
-        shut_down_ms_cnt += ONE_CYCLE_TIME_MS;
+        // shut_down_ms_cnt += ONE_CYCLE_TIME_MS;
         if (shut_down_ms_cnt >= 900000)
         {
             // 如果超过了15min，关机：
@@ -743,7 +770,7 @@ label:
     T0EN = 0; // 关闭定时器和PWM输出
     T1EN = 0;
     T2EN = 0;
-    // T3EN = 0;
+    T3EN = 0;
 
     PWM0EC = 0;
     PWM1EC = 0;
@@ -751,7 +778,7 @@ label:
     T2DATA = 0;
     ADEN = 0; // 不使能ad
 
-    // LED脚配置为输入模式：
+    // LED脚配置为输入模式（从外部来看，相当于高阻态）：
     P14OE = 0;
     P04OE = 0;
     P03OE = 0;
@@ -767,7 +794,7 @@ label:
     HFEN = 0; // 关闭高速时钟
     LFEN = 1;
 
-    // 休眠前关闭外设 AD等 使能唤醒条件键盘中断
+    // 休眠前关闭外设
     Nop();
     Nop();
     Stop();
@@ -781,7 +808,8 @@ label:
     adc_config();
     adc_sel_pin(ADC_PIN_P00_AN0);
     adc_val = adc_get_val_once();
-    if (adc_val < ADCDETECT_CHARING_THRESHOLD && P01D) // 如果按下开机按键/插入充电器，不会满足条件
+    // 如果按下开机按键/插入充电器，不会满足条件：
+    if (adc_val < ADCDETECT_CHARING_THRESHOLD && P01D)
     {
         // 如果没有按下开机按键、没有插入充电器
         // 关闭ADC，继续进入休眠：
@@ -807,11 +835,7 @@ label:
 
     // FLAG_IS_NOT_OPEN_DEVICE = 0;
 
-    Sys_Init();
-
-    LED_WORKING_OFF();
-    LED_FULL_CHARGE_OFF();
-    LED_CHARGING_OFF();
+    Sys_Init(); 
     GIE = 1;
 
     delay_ms(100); // 等待系统稳定
@@ -820,11 +844,6 @@ label:
 void main(void)
 {
     Sys_Init();
-
-    // 关闭所有指示灯
-    LED_WORKING_OFF();
-    LED_FULL_CHARGE_OFF();
-    LED_CHARGING_OFF();
 
     delay_ms(100); // 等待系统稳定
 
@@ -1046,9 +1065,20 @@ void main(void)
 
             // 工作时检测到低电量
             LED_CHARGING_ON();
-            delay_ms(200);
+            // delay_ms(200);
+            for (i = 0; i < 20; i++)
+            {
+                key_scan_handle();
+                delay_ms(10);
+            }
+
             LED_CHARGING_OFF();
-            delay_ms(200);
+            // delay_ms(200);
+            for (i = 0; i < 20; i++)
+            {
+                key_scan_handle();
+                delay_ms(10);
+            }
         }
 
         if (FLAG_IS_DEVICE_OPEN && FLAG_IS_IN_CHARGING)
@@ -1088,19 +1118,22 @@ void int_isr(void) __interrupt
     //     INT0IF = 0;
     // }
 
-    // if (T3IF & T3IE)
-    // {
-    //     // 目前每1ms进入一次中断
-    //     // static u8 key_scan_cnt = 0;
-    //     // key_scan_cnt++;
-    //     // if (key_scan_cnt >= KEY_SCAN_TIME)
-    //     // {
-    //     //     key_scan_cnt = 0;
-    //     //     flag_key_scan_10ms = 1;
-    //     // }
+    if (T3IF & T3IE)
+    {
+        // 目前每1ms进入一次中断
+        if (FLAG_IS_DEVICE_OPEN)
+        {
+            turn_dir_ms_cnt++;  // 会在 turn_dir_scan_handle() 内处理并清零
+            shut_down_ms_cnt++; // 会在 shutdown_scan_handle() 内处理并清零
+        }
 
-    //     T3IF = 0;
-    // }
+        // if (timer3_cnt < 4294967296)
+        // {
+        //     timer3_cnt++;
+        // }
+
+        T3IF = 0;
+    }
 
     __asm;
     swapar _statusbuf;
