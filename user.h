@@ -45,26 +45,7 @@
 #define FAIL 1
 #define PASS 0
 
-#define ARRAY_SIZE(array) (sizeof(array)/sizeof(array[0]))
-
-//============Define  Flag=================
-typedef union
-{
-	unsigned char byte;
-	struct
-	{
-		u8 bit0 : 1;
-		u8 bit1 : 1;
-		u8 bit2 : 1;
-		u8 bit3 : 1;
-		u8 bit4 : 1;
-		u8 bit5 : 1;
-		u8 bit6 : 1;
-		u8 bit7 : 1;
-	} bits;
-} bit_flag;
-volatile bit_flag flag1;
-volatile bit_flag flag2;
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #define USE_MY_DEBUG 0
 
@@ -79,7 +60,8 @@ volatile bit_flag flag2;
 #define BAT_FIX_VAL (1773 / 1000)
 
 #ifdef BAT_FIX_VAL
-#define ADCDETECT_BAT_FULL (3720) //  (3720--对应8.52V)
+// #define ADCDETECT_BAT_FULL (3720) //  (3720--对应8.52V)
+#define ADCDETECT_BAT_FULL (3666) //  (3666--对应8.4V)
 #define ADCDETECT_BAT_NULL_EX (280)
 #define ADCDETECT_BAT_WILL_FULL (3472) // (1958)
 #define ADCVAL_REF_BAT_6_0_V (2618)	   // (1477)
@@ -103,14 +85,6 @@ volatile bit_flag flag2;
 
 #define ONE_CYCLE_TIME_MS 89 // 一次主循环的耗时，单位：ms
 
-// 驱动指示灯的引脚定义
-#define LED_WORKING_PIN P14D	 // 工作指示灯
-#define LED_CHARGING_PIN P04D	 // 充电指示灯
-#define LED_FULL_CHARGE_PIN P03D // 满电指示灯
-
-#define LED_RED	  // 红灯
-#define LED_GREEN // 绿灯
-#define LED_BLUE  // 蓝灯
 // ===================================================
 // 低电量相关配置                                    //
 // ===================================================
@@ -119,12 +93,12 @@ volatile bit_flag flag2;
 // ===================================================
 // 充电相关配置                                      //
 // ===================================================
-// #define TMP_BAT_VAL_FIX                 55  // 额外固定增益
+#define TMP_BAT_VAL_FIX 55 // 额外固定增益
 // struct tmp_bat_val_fix
 // {
 //     u16 adc_bat_val;
 //     u8 tmp_bat_val_fix;
-// }; 
+// };
 // struct tmp_bat_val_fix bat_val_fix_table[] = {
 //     // table内每增减一项，对应会增减4个字节
 //     // { 2619, TMP_BAT_VAL_FIX + 37 },  // 6.0V
@@ -138,25 +112,47 @@ volatile bit_flag flag2;
 // 机械按键相关配置                                  //
 // ===================================================
 // 检测按键状态的引脚定义，检测到低电平为有效
- 
-// 定义按键的id
+
+// 定义按键对应的键值(id)
 enum
-{	
+{
 	KEY_ID_NONE = 0,
 	KEY_ID_MODE,
 	KEY_ID_HEAT,
 };
-#define CONTROL_HEAT_PIN P12D // 驱动控制加热的引脚
+
 // 检测开关与模式按键的引脚
 #define KEY_MODE_PIN P01D
 // 检测加热的引脚
 #define KEY_HEAT_PIN P11D
 #define KEY_SCAN_TIME (10) // 按键扫描时间 ，单位： ms
-#define KEY_FILTER_TIMES (3)// 按键消抖次数 (消抖时间 == 消抖次数 * 按键扫描时间)
 
+// 如果只消抖2次，会过滤不掉抖动
+#define KEY_FILTER_TIMES (3) // 按键消抖次数 (消抖时间 == 消抖次数 * 按键扫描时间)
 
-#define LED_ON 0  // LED点亮时，对应的驱动电平
-#define LED_OFF 1 // LED熄灭时，对应的驱动电平
+enum
+{
+	KEY_EVENT_NONE = 0,	  // 无按键事件
+	KEY_EVENT_HEAT_PRESS, // 加热按键短按
+	KEY_EVENT_MODE_PRESS, // 开关/模式按键短按
+	KEY_EVENT_MODE_HOLD,  // 开关/模式按键长按
+};
+volatile u8 key_event; // 存放按键事件的变量
+
+// ===================================================
+// LED相关配置                                      //
+// ===================================================
+// 驱动指示灯的引脚定义
+#define LED_WORKING_PIN P14D	 // 工作指示灯
+#define LED_CHARGING_PIN P04D	 // 充电指示灯
+#define LED_FULL_CHARGE_PIN P03D // 满电指示灯
+#define LED_RED					 // 红灯
+#define LED_GREEN				 // 绿灯
+#define LED_BLUE				 // 蓝灯
+
+#define CONTROL_HEAT_PIN P12D // 驱动控制加热的引脚
+#define LED_ON 0			  // LED点亮时，对应的驱动电平
+#define LED_OFF 1			  // LED熄灭时，对应的驱动电平
 
 #define LED_WORKING_ON()              \
 	{                                 \
@@ -229,6 +225,7 @@ enum
 	MODE_1 = 0, // 一上电，按下电源按键，使用的模式
 	MODE_2,
 	MODE_3,
+	MODE_4,
 };
 volatile u8 mode_flag; // 存放模式的标志位
 
@@ -260,14 +257,32 @@ volatile u8 flag_bat_is_empty; // 标志位，用于检测是否拔出了电池
 
 volatile u16 tmp_bat_val;	   // 存放检测到的电池电压+计算的压差对应的adc值
 volatile u8 over_charging_cnt; // 在充电时，检测电池是否满电的计数值
-volatile u8 full_charge_cnt;  // 检测到充满电后，进行计数的变量
+volatile u8 full_charge_cnt;   // 检测到充满电后，进行计数的变量
 //
-
 
 // 中断服务程序使用到的两个变量：
 u8 abuf;
 u8 statusbuf;
 
+//============Define  Flag=================
+typedef union
+{
+	unsigned char byte;
+	struct
+	{
+		u8 bit0 : 1;
+		u8 bit1 : 1;
+		u8 bit2 : 1;
+		u8 bit3 : 1;
+		u8 bit4 : 1;
+		u8 bit5 : 1;
+		u8 bit6 : 1;
+		u8 bit7 : 1;
+	} bits;
+} bit_flag;
+volatile bit_flag flag1;
+volatile bit_flag flag2;
+volatile bit_flag flag3;
 
 #define FLAG_IS_DEVICE_OPEN flag1.bits.bit0		// 设备是否开机的标志位，0--未开机，1--开机
 #define FLAG_IS_HEATING flag1.bits.bit1			// 加热是否工作的标志位
@@ -280,9 +295,12 @@ u8 statusbuf;
 #define FLAG_DURING_CHARGING_BAT_IS_NULL flag1.bits.bit7 // 标志位，在充电时检测到电池是否为空，0--不为空，1--在充电时，电池为空
 
 #define flag_ctl_device_open flag2.bits.bit0 // 控制标志位，控制打开/关闭设备
-#define flag_ctl_heat_open flag2.bits.bit1 // 控制标志位，控制 加热的 开/关
+#define flag_ctl_heat_open flag2.bits.bit1	 // 控制标志位，控制 加热的 开/关
 
 #define flag_is_low_battery flag2.bits.bit2 // 标志位，是否检测到低电量
+
+#define flag_ctl_dir flag3.bits.bit0   // 控制标志位，是否要切换方向
+#define flag_ctl_speed flag3.bits.bit1 // 控制标志位，是否要切换电机转速
 
 // #define flag_key_scan_10ms flag2.bits.bit0 // 标志位,用于按键检测，是否经过了10ms
 
@@ -307,7 +325,7 @@ void delay_ms(u16 xms)
 
 // #if USE_MY_DEBUG
 #define DEBUG_PIN P16D
-#if 0 // 以下程序约占用81字节空间
+#if 0  // 以下程序约占用81字节空间
 // 通过一个引脚输出数据(发送一次约400ms)
 // #define DEBUG_PIN P22D
 void send_data_msb(u32 send_data)
