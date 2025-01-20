@@ -61,7 +61,13 @@
 
 #ifdef BAT_FIX_VAL
 // #define ADCDETECT_BAT_FULL (3720) //  (3720--对应8.52V)
-#define ADCDETECT_BAT_FULL (3666) //  (3666--对应8.4V)
+// #define ADCDETECT_BAT_FULL (3666) //  (3666--对应8.4V,但是实际测得在8.51-8.52V才停止)
+// #define ADCDETECT_BAT_FULL (3613) // 计算得出是8.27V， 是在3666的基础上减去一定值（补偿）,实际测得是8.36V
+// #define ADCDETECT_BAT_FULL (3626) //  实际测试是8.37
+// #define ADCDETECT_BAT_FULL (3639) //  实际测试是8.39V
+#define ADCDETECT_BAT_FULL (3642) //  实际测试是 V
+// #define ADCDETECT_BAT_FULL (3644) //  实际测试是8.41V
+// #define ADCDETECT_BAT_FULL (3647) //  实际测试是 8.41V
 #define ADCDETECT_BAT_NULL_EX (280)
 #define ADCDETECT_BAT_WILL_FULL (3472) // (1958)
 #define ADCVAL_REF_BAT_6_0_V (2618)	   // (1477)
@@ -88,7 +94,9 @@
 // ===================================================
 // 低电量相关配置                                    //
 // ===================================================
-#define LOW_BATTERY_AD_VAL (3055) // 低电量对应的ad值 (3055,对应7V)
+// #define LOW_BATTERY_AD_VAL (3055) // 低电量对应的ad值 (3055,对应7V)
+// #define LOW_BATTERY_AD_VAL (2837) // 低电量对应的ad值 (2837,对应6.5V)
+#define LOW_BATTERY_AD_VAL (2985) // 低电量对应的ad值 (2985,对应6.84V)
 
 // ===================================================
 // 充电相关配置                                      //
@@ -260,6 +268,16 @@ volatile u8 over_charging_cnt; // 在充电时，检测电池是否满电的计数值
 volatile u8 full_charge_cnt;   // 检测到充满电后，进行计数的变量
 //
 
+// 定义变量
+#define PWM_MAX_LEVEL 100 // PWM等级数（亮度级别）
+#define BREATH_PERIOD 200  // 呼吸周期（ms）
+
+static uint8_t pwm_duty;		 // 当前PWM占空比
+static uint16_t pwm_counter;	 // PWM计数器
+static uint8_t breath_counter;	 // 呼吸效果计数器
+static uint8_t breath_direction; // 呼吸方向：0-渐亮，1-渐暗
+static uint8_t led_state;		 // LED状态
+
 // 中断服务程序使用到的两个变量：
 u8 abuf;
 u8 statusbuf;
@@ -301,6 +319,8 @@ volatile bit_flag flag3;
 
 #define flag_ctl_dir flag3.bits.bit0   // 控制标志位，是否要切换方向
 #define flag_ctl_speed flag3.bits.bit1 // 控制标志位，是否要切换电机转速
+
+#define flag_maybe_low_battery flag3.bits.bit2 // 标志位，可能检测到了低电量
 
 // #define flag_key_scan_10ms flag2.bits.bit0 // 标志位,用于按键检测，是否经过了10ms
 
