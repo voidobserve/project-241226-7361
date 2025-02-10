@@ -604,15 +604,16 @@ void adc_scan_handle(void)
                 {
                     full_charge_cnt = 0; //
 
-                    LED_CHARGING_OFF(); // 关闭充电指示灯
-                    // LED_WORKING_ON();   // 开启工作指示灯（蓝灯常亮）
-                    LED_FULL_CHARGE_ON(); // 开启电池充满电的指示灯
-
                     PWM2EC = 0; // 关闭控制升压电路的pwm
                     T2DATA = 0;
                     // FLAG_IS_IN_CHARGING = 0; // 不能给这个标志位清零（交给充电扫描来清零）
                     FLAG_BAT_IS_NEED_CHARGE = 0;
                     FLAG_BAT_IS_FULL = 1;
+
+                    LED_CHARGING_OFF(); // 关闭充电指示灯
+                    // LED_WORKING_ON();   // 开启工作指示灯（蓝灯常亮）
+                    // LED_FULL_CHARGE_ON(); // 开启电池充满电的指示灯
+                    LED_WORKING_ON();      // 打开电源指示灯，表示充满电
                     break;
                 }
             }
@@ -695,7 +696,7 @@ void adc_scan_handle(void)
                 PWM2EC = 0;         // 关闭控制升压电路的pwm
                 T2DATA = 0;
                 LED_FULL_CHARGE_OFF(); // 关闭电池充满电的指示灯
-                // LED_WORKING_OFF();     // 关闭工作状态指示灯（关闭蓝灯） =====================================
+                LED_WORKING_OFF(); // 关闭电池充满电的指示灯（白灯）
 
                 FLAG_DURING_CHARGING_BAT_IS_NULL = 0; // 清空该标志位，因为已经不在充电的情况下
                 break;
@@ -714,6 +715,7 @@ void adc_scan_handle(void)
                 {
                     // 如果未满电
                     LED_FULL_CHARGE_OFF();
+                    LED_WORKING_OFF();
                     // LED_CHARGING_ON();
                 }
             }
@@ -1063,10 +1065,10 @@ void main(void)
             // tmp_bat_val += 60;
 
             // tmp_bat_val += 75; // 1.16-1.17
-            tmp_bat_val += 80; //  1.21
-            
-            // tmp_bat_val += 95; // 
-            // tmp_bat_val += 105; // 1.32-1.39A
+            // tmp_bat_val += 80; //  1.21
+
+            tmp_bat_val += 95; // 1.18A(电池8V，使用外部的电池)
+                               // tmp_bat_val += 105; // 1.32-1.39A
 
 #endif
 
@@ -1257,7 +1259,7 @@ void int_isr(void) __interrupt
         //     timer3_cnt++;
         // }
 
-        if (FLAG_IS_IN_CHARGING)
+        if (FLAG_IS_IN_CHARGING && 0 == FLAG_BAT_IS_FULL)
         {
             // PWM控制
             if (pwm_counter < pwm_duty)
