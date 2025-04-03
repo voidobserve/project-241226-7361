@@ -98,6 +98,8 @@
 // #define LOW_BATTERY_AD_VAL (2837) // 低电量对应的ad值 (2837,对应6.5V)
 #define LOW_BATTERY_AD_VAL (2985) // 低电量对应的ad值 (2985,对应6.84V)
 
+#define SHUT_DOWN_AD_VAL (2794) // 关机电压对应的ad值(2794,对应6.4V，实际测试是在6.45~6.46V左右关机)
+
 // ===================================================
 // 充电相关配置                                      //
 // ===================================================
@@ -321,6 +323,9 @@ volatile bit_flag flag3;
 #define flag_ctl_speed flag3.bits.bit1 // 控制标志位，是否要切换电机转速
 
 #define flag_maybe_low_battery flag3.bits.bit2 // 标志位，可能检测到了低电量
+
+#define flag_tim_scan_maybe_shut_down flag3.bits.bit3 // 标志位，可能需要关机，由定时器扫描，定时器累计持续一段时间后，确认真的需要关机
+#define flag_is_needed_shut_down flag3.bits.bit4 // 标志位，是否检测到了低电压关机，0--否，1--是，由对应的功能来执行关机
 
 // #define flag_key_scan_10ms flag2.bits.bit0 // 标志位,用于按键检测，是否经过了10ms
 
