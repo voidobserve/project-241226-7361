@@ -35,7 +35,8 @@ void CLR_RAM(void)
 void IO_Init(void)
 {
     // IOP0 = 0x00;   // io口数据位
-    IOP0 = 0x18;   // 不点亮LED
+    // IOP0 = 0x18;   // 不点亮LED
+    IOP0 = (0x01 << 4) | (0x01 << 3);   // 不点亮LED
     OEP0 = 0x3F;   // io口方向 1:out  0:in
     PUP0 = 0x00;   // io口上拉电阻   1:enable  0:disable
     PDP0 = 0x00;   // io口下拉电阻   1:enable  0:disable
@@ -451,7 +452,7 @@ void key_event_handle(void)
 
             if (flag_is_low_battery)
             {
-                // 如果关机前处于低电量报警的状态
+                // 如果关机前处于 低电量报警 的状态
                 flag_is_low_battery = 0;
                 LED_CHARGING_OFF(); // 关闭用于报警的LED
             }
@@ -671,7 +672,7 @@ void adc_scan_handle(void)
                 flag_is_needed_shut_down = 0;
                 // 关机：
                 LED_WORKING_OFF(); // 关闭电源指示灯
-                LED_CHARGING_OFF();
+                LED_CHARGING_OFF(); 
                 HEATING_OFF(); // 关闭加热
                 FLAG_IS_DEVICE_OPEN = 0;
                 FLAG_IS_HEATING = 0;
@@ -740,9 +741,8 @@ void adc_scan_handle(void)
             if (FLAG_IS_DEVICE_OPEN)
             {
             }
-            else
-            {
-                // 如果设备未开启
+            else // 如果设备未开启
+            { 
                 if (FLAG_BAT_IS_FULL)
                 {
                 }
@@ -915,9 +915,13 @@ label:
     ADEN = 0; // 不使能ad
 
     // LED脚配置为输入模式（从外部来看，相当于高阻态）：
-    P14OE = 0;
-    P04OE = 0;
-    P03OE = 0;
+    // P14OE = 0;
+    // P04OE = 0;
+    // P03OE = 0;
+
+    LED_WORKING_OFF();
+    LED_CHARGING_OFF();
+    LED_FULL_CHARGE_OFF();
 
     // 开关/模式按键的配置，配置为输入上拉
     P01PU = 1;
@@ -1276,8 +1280,10 @@ void int_isr(void) __interrupt
                     if (flag_maybe_low_battery)
                     {
                         low_bat_cnt++;
-                        if (low_bat_cnt >= 2000)
+                        // if (low_bat_cnt >= 2000) // xx ms
+                        if (low_bat_cnt >= 5000) // xx ms 
                         {
+                            low_bat_cnt = 0;
                             flag_is_low_battery = 1;
                         }
                     }
