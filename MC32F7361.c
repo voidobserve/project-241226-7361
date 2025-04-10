@@ -36,11 +36,11 @@ void IO_Init(void)
 {
     // IOP0 = 0x00;   // io口数据位
     // IOP0 = 0x18;   // 不点亮LED
-    IOP0 = (0x01 << 4) | (0x01 << 3);   // 不点亮LED
-    OEP0 = 0x3F;   // io口方向 1:out  0:in
-    PUP0 = 0x00;   // io口上拉电阻   1:enable  0:disable
-    PDP0 = 0x00;   // io口下拉电阻   1:enable  0:disable
-    P0ADCR = 0x00; // io类型选择  1:模拟输入  0:通用io
+    IOP0 = (0x01 << 4) | (0x01 << 3); // 不点亮LED
+    OEP0 = 0x3F;                      // io口方向 1:out  0:in
+    PUP0 = 0x00;                      // io口上拉电阻   1:enable  0:disable
+    PDP0 = 0x00;                      // io口下拉电阻   1:enable  0:disable
+    P0ADCR = 0x00;                    // io类型选择  1:模拟输入  0:通用io
 
     // IOP1 = 0x00;   // io口数据位
     IOP1 = 0x10;   // 不点亮LED
@@ -672,7 +672,7 @@ void adc_scan_handle(void)
                 flag_is_needed_shut_down = 0;
                 // 关机：
                 LED_WORKING_OFF(); // 关闭电源指示灯
-                LED_CHARGING_OFF(); 
+                LED_CHARGING_OFF();
                 HEATING_OFF(); // 关闭加热
                 FLAG_IS_DEVICE_OPEN = 0;
                 FLAG_IS_HEATING = 0;
@@ -742,7 +742,7 @@ void adc_scan_handle(void)
             {
             }
             else // 如果设备未开启
-            { 
+            {
                 if (FLAG_BAT_IS_FULL)
                 {
                 }
@@ -1277,11 +1277,13 @@ void int_isr(void) __interrupt
 
                 { // 低电量检测
                     static u16 low_bat_cnt = 0;
+                    // static u16 cancel_low_bat_alarm_cnt = 0; // 取消低电量报警的时间计数
+
                     if (flag_maybe_low_battery)
                     {
                         low_bat_cnt++;
                         // if (low_bat_cnt >= 2000) // xx ms
-                        if (low_bat_cnt >= 5000) // xx ms 
+                        if (low_bat_cnt >= 5000) // xx ms
                         {
                             low_bat_cnt = 0;
                             flag_is_low_battery = 1;
@@ -1290,6 +1292,19 @@ void int_isr(void) __interrupt
                     else
                     {
                         low_bat_cnt = 0;
+
+                        // if (flag_is_low_battery) // 如果之前处于低电量报警
+                        // {
+                            // cancel_low_bat_alarm_cnt++;
+                        //     if (cancel_low_bat_alarm_cnt >= 2000) // 持续 xx ms检测到电池电量正常，取消低电量报警
+                        //     {
+                        //         cancel_low_bat_alarm_cnt = 0;
+                        //     }
+                        // }
+                        // else
+                        // {
+                        //     cancel_low_bat_alarm_cnt = 0;
+                        // }
                     }
                 } // 低电量检测
 
@@ -1313,11 +1328,7 @@ void int_isr(void) __interrupt
             }
         }
 
-        // if (timer3_cnt < 4294967296)
-        // {
-        //     timer3_cnt++;
-        // }
-
+        // 呼吸灯控制：
         if (FLAG_IS_IN_CHARGING && 0 == FLAG_BAT_IS_FULL)
         {
             // PWM控制
@@ -1379,7 +1390,7 @@ void int_isr(void) __interrupt
             {
                 LED_CHARGING_PIN = LED_OFF;
             }
-        }
+        } // 呼吸灯控制 if (FLAG_IS_IN_CHARGING && 0 == FLAG_BAT_IS_FULL)
 
         T3IF = 0;
     }
