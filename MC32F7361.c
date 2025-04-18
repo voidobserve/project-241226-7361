@@ -32,31 +32,31 @@ void CLR_RAM(void)
 ;  *    @输入参数          :
 ;  *    @返回参数          :
 ;  ***********************************************/
-void IO_Init(void)
-{
-    // IOP0 = 0x00;   // io口数据位
-    // IOP0 = 0x18;   // 不点亮LED
-    IOP0 = (0x01 << 4) | (0x01 << 3); // 不点亮LED
-    OEP0 = 0x3F;                      // io口方向 1:out  0:in
-    PUP0 = 0x00;                      // io口上拉电阻   1:enable  0:disable
-    PDP0 = 0x00;                      // io口下拉电阻   1:enable  0:disable
-    P0ADCR = 0x00;                    // io类型选择  1:模拟输入  0:通用io
+// void IO_Init(void)
+// {
+//     // IOP0 = 0x00;   // io口数据位
+//     // IOP0 = 0x18;   // 不点亮LED
+//     IOP0 = (0x01 << 4) | (0x01 << 3); // 不点亮LED
+//     OEP0 = 0x3F;                      // io口方向 1:out  0:in
+//     PUP0 = 0x00;                      // io口上拉电阻   1:enable  0:disable
+//     PDP0 = 0x00;                      // io口下拉电阻   1:enable  0:disable
+//     P0ADCR = 0x00;                    // io类型选择  1:模拟输入  0:通用io
 
-    // IOP1 = 0x00;   // io口数据位
-    IOP1 = 0x10;   // 不点亮LED
-    OEP1 = 0xFF;   // io口方向 1:out  0:in
-    PUP1 = 0x00;   // io口上拉电阻   1:enable  0:disable
-    PDP1 = 0x00;   // io口下拉电阻   1:enable  0:disable
-    P1ADCR = 0x00; // io类型选择  1:模拟输入  0:通用io
+//     // IOP1 = 0x00;   // io口数据位
+//     IOP1 = 0x10;   // 不点亮LED
+//     OEP1 = 0xFF;   // io口方向 1:out  0:in
+//     PUP1 = 0x00;   // io口上拉电阻   1:enable  0:disable
+//     PDP1 = 0x00;   // io口下拉电阻   1:enable  0:disable
+//     P1ADCR = 0x00; // io类型选择  1:模拟输入  0:通用io
 
-    IOP2 = 0x00; // io口数据位
-    OEP2 = 0xFF; // io口方向 1:out  0:in
-    PUP2 = 0x00; // io口上拉电阻   1:enable  0:disable
-    PDP2 = 0x00; // io口下拉电阻   1:enable  0:disablea
+//     IOP2 = 0x00; // io口数据位
+//     OEP2 = 0xFF; // io口方向 1:out  0:in
+//     PUP2 = 0x00; // io口上拉电阻   1:enable  0:disable
+//     PDP2 = 0x00; // io口下拉电阻   1:enable  0:disablea
 
-    PMOD = 0x00;  // P00、P01、P13 io端口值从寄存器读，推挽输出
-    DRVCR = 0x80; // 普通驱动
-}
+//     PMOD = 0x00;  // P00、P01、P13 io端口值从寄存器读，推挽输出
+//     DRVCR = 0x80; // 普通驱动
+// }
 
 // adc配置
 void adc_config(void)
@@ -77,72 +77,72 @@ void adc_config(void)
 
 // 定时器0的pwm配置--输出引脚 P16
 // 控制正向的pwm
-void timer0_pwm_config(void)
-{
-    // ====================================================
-    // 接近15.645KHz版本，前提条件：FCPU = FOSC / 4
-    // T0CR |= 0x02; // 4分频
+// void timer0_pwm_config(void)
+// {
+//     // ====================================================
+//     // 接近15.645KHz版本，前提条件：FCPU = FOSC / 4
+//     // T0CR |= 0x02; // 4分频
 
-    T0LOAD = 172 - 1;
-    // T0DATA = 80; // 占空比 == T0DATA / T0LOAD （占空比等到调节转速和方向时再调节）
-    PWM0EC = 0;  // 禁止PWM输出
-    T0CR = 0x81; // 使能定时器，时钟源为FCPU，2分频
-}
+//     T0LOAD = 172 - 1;
+//     // T0DATA = 80; // 占空比 == T0DATA / T0LOAD （占空比等到调节转速和方向时再调节）
+//     PWM0EC = 0;  // 禁止PWM输出
+//     T0CR = 0x81; // 使能定时器，时钟源为FCPU，2分频
+// }
 
 // 定时器1pwm配置，输出引脚 P17
 // 控制反向的pwm
-void timer1_pwm_config(void)
-{
-    // ====================================================
-    // 接近15.645KHz版本，前提条件：FCPU = FOSC / 4
-    // T1CR |= 0x02; // 4分频
-    T1LOAD = 172 - 1;
-    // T1DATA = 25; // 占空比 == T1DATA / T1LOAD
-    PWM1EC = 0;  // 禁止PWM1输出
-    T1CR = 0x81; // 使能定时器，时钟源为FCPU，2分频
-}
+// void timer1_pwm_config(void)
+// {
+//     // ====================================================
+//     // 接近15.645KHz版本，前提条件：FCPU = FOSC / 4
+//     // T1CR |= 0x02; // 4分频
+//     T1LOAD = 172 - 1;
+//     // T1DATA = 25; // 占空比 == T1DATA / T1LOAD
+//     PWM1EC = 0;  // 禁止PWM1输出
+//     T1CR = 0x81; // 使能定时器，时钟源为FCPU，2分频
+// }
 
 // 定时器2的PWM配置，输出引脚 P15
 // 控制充电的pwm
-void timer2_pwm_config(void)
-{
-    // 时钟源选择：FTMR，由TMR配置时钟源
-    T2CKS0 = 1;
-    T2CKS1 = 0;
-    // 定时器高频时钟 FTMR 频率选择 FHOSC/2：
-    TMRCKS0 = 0;
-    TMRCKS1 = 1;
+// void timer2_pwm_config(void)
+// {
+//     // 时钟源选择：FTMR，由TMR配置时钟源
+//     T2CKS0 = 1;
+//     T2CKS1 = 0;
+//     // 定时器高频时钟 FTMR 频率选择 FHOSC/2：
+//     TMRCKS0 = 0;
+//     TMRCKS1 = 1;
 
-    T2LOAD = 209; //
-    T2DATA = 0;
-    PWM2EC = 0; // 禁止PWM输出
-    // PWM2EC = 1;	 // 使能PWM输出
-    T2EN = 1;
-}
+//     T2LOAD = 209; //
+//     T2DATA = 0;
+//     PWM2EC = 0; // 禁止PWM输出
+//     // PWM2EC = 1;	 // 使能PWM输出
+//     T2EN = 1;
+// }
 
 // 定时器3
-void timer3_config(void)
-{
-    // T3LOAD = 250 - 1; // FCPU 32分频后，这里是1ms触发一次中断
-    // T3CR = 0x85;      // 使能定时器，时钟源选择FCPU，32分频
-    // T3IE = 1;
+// void timer3_config(void)
+// {
+//     // T3LOAD = 250 - 1; // FCPU 32分频后，这里是1ms触发一次中断
+//     // T3CR = 0x85;      // 使能定时器，时钟源选择FCPU，32分频
+//     // T3IE = 1;
 
-    T3LOAD = 25 - 1; //
-    T3CR = 0x85;     // 使能定时器，时钟源选择FCPU，32分频
-    T3IE = 1;
-}
+//     T3LOAD = 25 - 1; //
+//     T3CR = 0x85;     // 使能定时器，时钟源选择FCPU，32分频
+//     T3IE = 1;
+// }
 
 // 按键检测引脚的配置：
-void key_config(void)
-{
-    // 检测加热按键的引脚配置：
-    P11PU = 1; // 上拉
-    P11OE = 0; // 输入模式
+// void key_config(void)
+// {
+//     // 检测加热按键的引脚配置：
+//     P11PU = 1; // 上拉
+//     P11OE = 0; // 输入模式
 
-    // 检测 开关机/模式切换 按键的引脚 配置 ：
-    P01PU = 1; // 上拉
-    P01OE = 0; // 输入模式
-}
+//     // 检测 开关机/模式切换 按键的引脚 配置 ：
+//     P01PU = 1; // 上拉
+//     P01OE = 0; // 输入模式
+// }
 
 // 切换adc检测的引脚
 void adc_sel_pin(u8 adc_pin)
@@ -150,7 +150,7 @@ void adc_sel_pin(u8 adc_pin)
     // 根据传参，切换成对应的通道
     switch (adc_pin)
     {
-    case ADC_PIN_P00_AN0:
+    case ADC_PIN_P00_AN0:      // 检测是否有充电的引脚
         ADCR0 &= ~(0x0F << 4); // 清空寄存器的通道选择位
         // 清空后的通道就是 AIN0--P00
 
@@ -161,7 +161,7 @@ void adc_sel_pin(u8 adc_pin)
         // ADCHS0 = 0;
         break;
 
-    case ADC_PIN_P02_AN1:
+    case ADC_PIN_P02_AN1:      // 检测电池分压后的引脚
         ADCR0 &= ~(0x0F << 4); // 清空寄存器的通道选择位
         ADCR0 |= 0x01 << 4;    // AIN1--P02;
 
@@ -278,22 +278,100 @@ void Sys_Init(void)
 {
     GIE = 0;
     CLR_RAM();
-    IO_Init();
+    // IO_Init();
+    {
+        IOP0 = (0x01 << 4) | (0x01 << 3); // 不点亮LED
+        OEP0 = 0x3F;                      // io口方向 1:out  0:in
+        PUP0 = 0x00;                      // io口上拉电阻   1:enable  0:disable
+        PDP0 = 0x00;                      // io口下拉电阻   1:enable  0:disable
+        P0ADCR = 0x00;                    // io类型选择  1:模拟输入  0:通用io
+
+        // IOP1 = 0x00;   // io口数据位
+        IOP1 = 0x10;   // 不点亮LED
+        OEP1 = 0xFF;   // io口方向 1:out  0:in
+        PUP1 = 0x00;   // io口上拉电阻   1:enable  0:disable
+        PDP1 = 0x00;   // io口下拉电阻   1:enable  0:disable
+        P1ADCR = 0x00; // io类型选择  1:模拟输入  0:通用io
+
+        IOP2 = 0x00; // io口数据位
+        OEP2 = 0xFF; // io口方向 1:out  0:in
+        PUP2 = 0x00; // io口上拉电阻   1:enable  0:disable
+        PDP2 = 0x00; // io口下拉电阻   1:enable  0:disablea
+
+        PMOD = 0x00;  // P00、P01、P13 io端口值从寄存器读，推挽输出
+        DRVCR = 0x80; // 普通驱动
+    }
     // 关闭所有指示灯
     LED_WORKING_OFF();
     LED_FULL_CHARGE_OFF();
     LED_CHARGING_OFF();
 
-    timer0_pwm_config();
-    timer1_pwm_config();
-    timer2_pwm_config();
+    // timer0_pwm_config();
+    {
+        T0LOAD = 172 - 1;
+        // T0DATA = 80; // 占空比 == T0DATA / T0LOAD （占空比等到调节转速和方向时再调节）
+        PWM0EC = 0;  // 禁止PWM输出
+        T0CR = 0x81; // 使能定时器，时钟源为FCPU，2分频
+    }
+    // timer1_pwm_config();
+    {
+        // ====================================================
+        // 接近15.645KHz版本，前提条件：FCPU = FOSC / 4
+        // T1CR |= 0x02; // 4分频
+        T1LOAD = 172 - 1;
+        // T1DATA = 25; // 占空比 == T1DATA / T1LOAD
+        PWM1EC = 0;  // 禁止PWM1输出
+        T1CR = 0x81; // 使能定时器，时钟源为FCPU，2分频
+    }
+    // timer2_pwm_config();
+    {
+        // 时钟源选择：FTMR，由TMR配置时钟源
+        T2CKS0 = 1;
+        T2CKS1 = 0;
+        // 定时器高频时钟 FTMR 频率选择 FHOSC ：
+        // TMRCKS0 = 0;
+        // TMRCKS1 = 1;
+        // 定时器高频时钟 FTMR 频率选择 FHOSC / 2 ：
+        TMRCKS0 = 0;
+        TMRCKS1 = 0;
 
-    timer3_config();
+        // T2CKS0 = 0;
+        // T2CKS1 = 0;
 
-    key_config();
+        T2LOAD = 209; //
+        // T2LOAD = 255; //
+        T2DATA = 0;
+        PWM2EC = 0; // 禁止PWM输出
+        // PWM2EC = 1;	 // 使能PWM输出
+        T2EN = 1;
+    }
+
+    // timer3_config();
+    {
+        // T3LOAD = 250 - 1; // FCPU 32分频后，这里是1ms触发一次中断
+        // T3CR = 0x85;      // 使能定时器，时钟源选择FCPU，32分频
+        // T3IE = 1;
+
+        T3LOAD = 25 - 1; //
+        T3CR = 0x85;     // 使能定时器，时钟源选择FCPU，32分频
+        T3IE = 1;
+    }
+
+    // key_config();
+    {
+        // 检测加热按键的引脚配置：
+        P11PU = 1; // 上拉
+        P11OE = 0; // 输入模式
+
+        // 检测 开关机/模式切换 按键的引脚 配置 ：
+        P01PU = 1; // 上拉
+        P01OE = 0; // 输入模式
+    }
     adc_config();
 
     GIE = 1;
+
+    delay_ms(1); // 等待系统稳定
 }
 
 // 获取按键对应的键值(id)
@@ -766,6 +844,9 @@ void adc_scan_handle(void)
             if (cnt >= 8)
             {
                 // 确认是插入充电线后，无论处于什么状态，都变为关机状态
+                // adc_initial_charging_val = adc_get_val();
+                // adc_initial_charging_val = adc_charging_val; // 只有刚插入充电器时，才更新初始的充电电压对应的ad值
+
                 full_charge_cnt = 0;
                 over_charging_cnt = 0;
 
@@ -976,16 +1057,16 @@ label:
     // FLAG_IS_NOT_OPEN_DEVICE = 0;
 
     Sys_Init();
-    GIE = 1;
+    // GIE = 1;
 
-    delay_ms(1); // 等待系统稳定
+    // delay_ms(1); // 等待系统稳定
 }
 
 void main(void)
 {
     Sys_Init();
 
-    delay_ms(1); // 等待系统稳定
+    // delay_ms(1); // 等待系统稳定
 
     // flag_bat_is_empty = 0; // （可以优化掉，上电默认就是0）
 
@@ -1011,6 +1092,17 @@ void main(void)
         // DEBUG_PIN = ~DEBUG_PIN; // 测试主循环是否正常
 
         // P10D = 1; // 测试一次循环所需的时间
+
+        if (flag_bat_is_empty)
+        {
+            // 如果电池为空，让对应的LED闪烁
+            LED_CHARGING_PIN = LED_ON;
+            delay_ms(500);
+            LED_CHARGING_PIN = LED_OFF;
+            delay_ms(500);
+            continue;
+        }
+
         // key_scan_handle(); // 按键扫描和处理函数
         key_event_handle(); // 按键事件处理函数，扫描在中断服务函数内执行
         adc_scan_handle();  // 充电扫描和处理函数(约占用89ms)
@@ -1025,6 +1117,7 @@ void main(void)
             last_pwm_val = T2DATA;      // 读出上一次PWM占空比对应的值
             max_pwm_val = (T2LOAD + 1); // 读出PWM占空比设定的、最大的值
 
+#if 1       // 使用计算的方式来控制充电电流
             /*
                 修改电压差值，电压差值 = 203 - (adc_bat_val * 122 / 1000)
 
@@ -1040,13 +1133,14 @@ void main(void)
             */
 
 #if 1
-            // if (adc_bat_val < 2619) // 如果在充电时检测到电池电压小于6.0V
-            // {
-            //     // tmp_bat_val = (u32)adc_bat_val + (294 - (u32)adc_bat_val * 157 / 1000);
-            //     // tmp_bat_val = adc_bat_val  + (522 - adc_bat_val * 157 / 1000);
-            //     tmp_bat_val = (adc_bat_val + 37);
-            // }
-            // else if (adc_bat_val <= 2837) // 如果检测电池电压小于 6.5V
+
+            /*
+                检测电池电压 1M上拉、470K下拉
+                检测电池电压的分压系数 == 470K / (470K + 1M)
+                约为 0.31972789115646258503401360544218
+
+
+            */
             if (adc_bat_val <= 2837) // 如果检测电池电压小于 6.5V
             {
                 tmp_bat_val = (adc_bat_val + 37);
@@ -1068,6 +1162,7 @@ void main(void)
                 // tmp_bat_val = (u32)adc_bat_val + (294 - (u32)adc_bat_val * 157 / 1000);
             }
             else // 如果在充电时检测到电池电压大于
+            // else if (adc_bat_val <= 3580) // 小于8.2V
             {
                 // tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 260); // 实际的充电电流更小了 0.75-0.85
                 // tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 304); // 1.3-1.5
@@ -1077,8 +1172,13 @@ void main(void)
                 // 如果检测电池的分压电阻是 22K / 100K，1.2-1.3A,最常见是在1.22A、1.26A
                 // 如果检测电池的分压电阻是 220K / 1M，充电电流在0.9A-1A
                 // tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 294);
+
                 tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 522);
             }
+            // else // 如果电池电压大于8.2V，降低电流
+            // {
+            // // tmp_bat_val = (adc_bat_val + 10);
+            // }
 
             // tmp_bat_val += 30;
             // tmp_bat_val += 32;
@@ -1099,15 +1199,49 @@ void main(void)
             // tmp_bat_val += 40;
 
             // 7361,0.98A-1.0A
+
+            // tmp_bat_val += 30;
+            // tmp_bat_val += 40; // 1.07、1.08A
+            // tmp_bat_val += 42;
+            // tmp_bat_val += 44;
+
+            // tmp_bat_val += 45; // 1.07
+
+            // tmp_bat_val += 47; // 1.12、但是后续会到1.2
+            // tmp_bat_val += 50; // 1.15A、1.2
             // tmp_bat_val += 55;
+            // tmp_bat_val += 60; // 1.1
+            // tmp_bat_val += 65; // 1.1
 
-            // tmp_bat_val += 60;
+            // tmp_bat_val += 120; //
+            // tmp_bat_val += 250; //
+            // tmp_bat_val += 350; //
+            // tmp_bat_val += 400; //
 
-            // tmp_bat_val += 75; // 1.16-1.17
-            // tmp_bat_val += 80; //  1.21
+            {
+                // if (tmp_bat_val > 90)
+                tmp_bat_val -= 90;
+            }
 
-            tmp_bat_val += 95; // 1.18A(电池8V，使用外部的电池)
-                               // tmp_bat_val += 105; // 1.32-1.39A
+            if (adc_bat_val >= 3579) // 8.2V及以上 , 降低电流
+            {
+                // tmp_bat_val -= 30; // 830mA
+                // tmp_bat_val -= 40; // 760mA
+                // tmp_bat_val -= 60; // 730-740
+                // tmp_bat_val -= 80;
+                u16 i;
+
+                // for (i = 0; i < 220; i++) // 660mA
+                // for (i = 0; i < 300; i++) // 610mA
+                // for (i = 0; i < 400; i++) // 550mA
+                for (i = 0; i < 450; i++) //
+                {
+                    if (tmp_bat_val > 2)
+                    {
+                        tmp_bat_val--;
+                    }
+                }
+            }
 
 #endif
 
@@ -1155,6 +1289,9 @@ void main(void)
             // tmp_val = max_pwm_val - (adc_charging_val * max_pwm_val * 22 / 61) / tmp_bat_val;
             tmp_val = max_pwm_val - (adc_charging_val * max_pwm_val * 94 / 147) / tmp_bat_val;
 
+            // adc_charging_val 改成了 adc_initial_charging_val，只使用刚插入充电头时对应的ad值来代入公式：
+            // tmp_val = max_pwm_val - ((u32)adc_initial_charging_val * max_pwm_val * 94 / 147) / tmp_bat_val;
+
             if (tmp_val >= max_pwm_val)
             {
                 // 如果PWM占空比对应的值 大于 最大占空比对应的值，说明计算溢出（可能是电池电压过小），按0处理
@@ -1172,16 +1309,90 @@ void main(void)
             }
             tmp_val >>= 3;
 
-            if (tmp_val > last_pwm_val)
             {
-                last_pwm_val = last_pwm_val + 1;
-            }
-            else if (tmp_val < last_pwm_val)
-            {
-                last_pwm_val = last_pwm_val - 1;
+                /*
+                    如果差值过大，则快速调节，如果差值过小，则慢速调节，
+                    防止电流突变，导致不同的板子最终充电电流不一致
+                */
+                static u8 cnt = 0;
+                cnt++;
+
+                if (tmp_val > last_pwm_val)
+                {
+                    if ((tmp_val - last_pwm_val) > 2 || cnt >= 10)
+                    {
+                        last_pwm_val++;
+                        cnt = 0;
+                    }
+                }
+                else if (tmp_val < last_pwm_val)
+                {
+                    if ((last_pwm_val - tmp_val) > 2 || cnt >= 10)
+                    {
+                        last_pwm_val--;
+                        cnt = 0;
+                    }
+                }
             }
 
+#endif // 使用计算的方式来控制充电电流
+
+#if 0 // 使用检测充电前后电池电压变化的差值来控制充电电流
+
+            u16 adc_bat_val_when_charging;     // 充电时的电池电压
+            u16 adc_bat_val_when_not_charging; // 未充电时的电池电压
+            u8 adjust_pwm_val_dir;             // 调整方向
+
+            if (flag_is_update_current)
+            {                
+                flag_is_update_current = 0;
+                PWM2EC = 1; // 使能升压的PWM
+                delay_ms(WAIT_CIRCUIT_STABLIZE_TIMES);
+                adc_sel_pin(ADC_PIN_P02_AN1);
+                adc_bat_val_when_charging = adc_get_val();
+
+                PWM2EC = 0; // 不使能升压的PWM
+                delay_ms(WAIT_CIRCUIT_STABLIZE_TIMES);
+                adc_bat_val_when_not_charging = adc_get_val();
+
+                if (adc_bat_val_when_charging > adc_bat_val_when_not_charging) /* 如果充电时，测得的ad值比没有充电时的ad值大 */
+                {
+                    if ((adc_bat_val_when_charging - adc_bat_val_when_not_charging) > ADC_BAT_DIFF_VAL) /* 如果充电时和没有充电时的差值大于设定的差值 */
+                    {
+                        adjust_pwm_val_dir = 0;
+                    }
+                    else
+                    {
+                        adjust_pwm_val_dir = 1;
+                    }
+                }
+                else
+                {
+                    adjust_pwm_val_dir = 1;
+                }
+
+                if (adjust_pwm_val_dir)
+                {
+                    if (last_pwm_val < max_pwm_val)
+                    {
+                        last_pwm_val++;
+                    }
+                }
+                else
+                {
+                    if (last_pwm_val >= 1)
+                    {
+                        last_pwm_val--;
+                    }
+                }
+            }
+
+            PWM2EC = 1; // 使能升压的PWM
+
+#endif // 使用检测充电前后电池电压变化的差值来控制充电电流
+
             T2DATA = last_pwm_val;
+
         } // if (FLAG_IS_IN_CHARGING)
         else // 如果未在充电
         {
@@ -1295,7 +1506,7 @@ void int_isr(void) __interrupt
 
                         // if (flag_is_low_battery) // 如果之前处于低电量报警
                         // {
-                            // cancel_low_bat_alarm_cnt++;
+                        // cancel_low_bat_alarm_cnt++;
                         //     if (cancel_low_bat_alarm_cnt >= 2000) // 持续 xx ms检测到电池电量正常，取消低电量报警
                         //     {
                         //         cancel_low_bat_alarm_cnt = 0;
@@ -1325,6 +1536,24 @@ void int_isr(void) __interrupt
                         flag_is_needed_shut_down = 0;
                     }
                 } // 关机电量检测
+
+                { // 充电时，调节电流时间间隔控制
+                    static u16 update_current_time_cnt;
+                    if (FLAG_IS_IN_CHARGING)
+                    {
+                        update_current_time_cnt++;
+                        if (update_current_time_cnt >= 500)
+                        {
+                            update_current_time_cnt = 0;
+                            flag_is_update_current = 1;
+                        }
+                    }
+                    else
+                    {
+                        FLAG_IS_IN_CHARGING = 0;
+                    }
+
+                } // 充电时，调节电流时间间隔控制
             }
         }
 

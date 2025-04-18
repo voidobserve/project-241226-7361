@@ -89,21 +89,52 @@
 
 #endif
 
-#define ONE_CYCLE_TIME_MS 89 // 一次主循环的耗时，单位：ms
+// #define ONE_CYCLE_TIME_MS 89 // 一次主循环的耗时，单位：ms
 
 // ===================================================
 // 低电量相关配置                                    //
 // ===================================================
+// 分压系数：470K / (470K + 1M)
 // #define LOW_BATTERY_AD_VAL (3055) // 低电量对应的ad值 (3055,对应7V)
 // #define LOW_BATTERY_AD_VAL (2837) // 低电量对应的ad值 (2837,对应6.5V)
-#define LOW_BATTERY_AD_VAL (2985) // 低电量对应的ad值 (2985,对应6.84V)
+// #define LOW_BATTERY_AD_VAL (2985) // 低电量对应的ad值 (2985,对应6.84V)
+#define LOW_BATTERY_AD_VAL (2837) // 低电量对应的ad值 (2837,对应6.5V)
+// #define LOW_BATTERY_AD_VAL (2794) // 低电量对应的ad值 (2794,对应6.4V)
 
-#define SHUT_DOWN_AD_VAL (2794) // 关机电压对应的ad值(2794,对应6.4V，实际测试是在6.45~6.46V左右关机)
+// #define SHUT_DOWN_AD_VAL (2794) // 关机电压对应的ad值(2794,对应6.4V，实际测试是在6.45~6.46V左右关机)
+// #define SHUT_DOWN_AD_VAL (2750) // 关机电压对应的ad值(2750,对应6.3V)
+#define SHUT_DOWN_AD_VAL (2707) // 关机电压对应的ad值(2707,对应6.2V)
 
 // ===================================================
 // 充电相关配置                                      //
 // ===================================================
-#define TMP_BAT_VAL_FIX 55 // 额外固定增益
+// #define TMP_BAT_VAL_FIX 55 // 额外固定增益
+
+/*
+    充电时的电池电压ad值和未充电时电池电压ad值，他们之前的ad值差值
+
+	检测电池电压 1M上拉、470K下拉 
+    检测电池电压的分压系数 == 470K / (470K + 1M)
+    约为 0.31972789115646258503401360544218
+
+    如果用内部 3 V参考电压，12位精度（0-4096），
+    那么 1单位ad值 相当于电池电池电压：
+    0.00229076628989361702127659574468  V 
+*/
+// #define ADC_BAT_DIFF_VAL (55) // 测得充电时 xxA
+// #define ADC_BAT_DIFF_VAL (65) // 
+// #define ADC_BAT_DIFF_VAL (75) // 
+
+#define ADC_BAT_DIFF_VAL (100) // 
+// #define ADC_BAT_DIFF_VAL (105) // 
+// #define ADC_BAT_DIFF_VAL (110) // 1.0-1.3AX
+
+// #define ADC_BAT_DIFF_VAL (120) // 
+// #define ADC_BAT_DIFF_VAL (130) // 
+#define WAIT_CIRCUIT_STABLIZE_TIMES (5) // 等待电路稳定时间,单位:ms
+// #define WAIT_CIRCUIT_STABLIZE_TIMES (10) // 等待电路稳定时间
+
+
 // struct tmp_bat_val_fix
 // {
 //     u16 adc_bat_val;
@@ -226,7 +257,7 @@ volatile u8 key_event; // 存放按键事件的变量
 enum
 {
 	ADC_PIN_P00_AN0 = 1, // 检测是否有充电的电压
-	ADC_PIN_P02_AN1,	 // 检测电池降压后的电压的引脚
+	ADC_PIN_P02_AN1,	 // 检测电池分压后的电压的引脚
 };
 
 // 定义模式，三种不同频率的模式
@@ -258,6 +289,9 @@ volatile u32 shut_down_ms_cnt; // 毫秒计数(用于运行15min后自动关机)
 
 volatile u32 adc_bat_val;	   // 存放检测到的电池电压的adc值
 volatile u16 adc_charging_val; // 存放检测到的充电电压的adc值
+
+volatile u16 adc_initial_charging_val; // 存放初始的充电电压
+
 volatile u32 max_pwm_val;	   // 临时存放最大占空比对应的值
 volatile u16 last_pwm_val;	   // 记录之前的pwm占空比的值
 volatile u16 tmp_val;		   // 临时存放需要调节的占空比对应的值
@@ -272,7 +306,7 @@ volatile u8 full_charge_cnt;   // 检测到充满电后，进行计数的变量
 
 // 定义变量
 #define PWM_MAX_LEVEL 100 // PWM等级数（亮度级别）
-#define BREATH_PERIOD 200  // 呼吸周期（ms）
+#define BREATH_PERIOD 200 // 呼吸周期（ms）
 
 static uint8_t pwm_duty;		 // 当前PWM占空比
 static uint16_t pwm_counter;	 // PWM计数器
@@ -325,9 +359,9 @@ volatile bit_flag flag3;
 #define flag_maybe_low_battery flag3.bits.bit2 // 标志位，可能检测到了低电量
 
 #define flag_tim_scan_maybe_shut_down flag3.bits.bit3 // 标志位，可能需要关机，由定时器扫描，定时器累计持续一段时间后，确认真的需要关机
-#define flag_is_needed_shut_down flag3.bits.bit4 // 标志位，是否检测到了低电压关机，0--否，1--是，由对应的功能来执行关机
+#define flag_is_needed_shut_down flag3.bits.bit4	  // 标志位，是否检测到了低电压关机，0--否，1--是，由对应的功能来执行关机
 
-// #define flag_key_scan_10ms flag2.bits.bit0 // 标志位,用于按键检测，是否经过了10ms
+#define flag_is_update_current flag3.bits.bit5 // 是否到了更新充电电流的时间
 
 // 毫秒级延时 (误差：在1%以内，1ms、10ms、100ms延时的误差均小于1%)
 // 前提条件：FCPU = FHOSC / 4
