@@ -328,7 +328,7 @@ void Sys_Init(void)
         // 时钟源选择：FTMR，由TMR配置时钟源
         T2CKS0 = 1;
         T2CKS1 = 0;
-        // 定时器高频时钟 FTMR 频率选择 FHOSC ：
+        // 定时器高频时钟 FTMR 频率选择 FHOSC ：（使用这么高的频率，mos会发热，mos一旦发热，后续就会烧掉）
         // TMRCKS0 = 0;
         // TMRCKS1 = 1;
         // 定时器高频时钟 FTMR 频率选择 FHOSC / 2 ：
@@ -1117,7 +1117,6 @@ void main(void)
             last_pwm_val = T2DATA;      // 读出上一次PWM占空比对应的值
             max_pwm_val = (T2LOAD + 1); // 读出PWM占空比设定的、最大的值
 
-#if 1       // 使用计算的方式来控制充电电流
             /*
                 修改电压差值，电压差值 = 203 - (adc_bat_val * 122 / 1000)
 
@@ -1132,34 +1131,73 @@ void main(void)
                 转换成单片机可以计算的形式：压差 = 203 - (充电时的电池电压 * 122 / 1000)
             */
 
-#if 1
-
             /*
                 检测电池电压 1M上拉、470K下拉
                 检测电池电压的分压系数 == 470K / (470K + 1M)
                 约为 0.31972789115646258503401360544218
-
-
             */
+#if 1
+            tmp_bat_val = adc_bat_val;
             if (adc_bat_val <= 2837) // 如果检测电池电压小于 6.5V
             {
-                tmp_bat_val = (adc_bat_val + 37);
+                // tmp_bat_val = (adc_bat_val + 37);
+                // tmp_bat_val += 37;
+                // tmp_bat_val += 60;
+                // tmp_bat_val += 310; ================ 只有800mA
+                // tmp_bat_val += 320;
+                // tmp_bat_val += 330; // 5V左右，650mA
+                // tmp_bat_val += 350;
+                // tmp_bat_val += 360;
+                // tmp_bat_val += 380; // 快到6.5V时，电流在1.3A
+                // tmp_bat_val += 400; //  6.3V--1.35A
+                // tmp_bat_val += 480; // 升到1.7A，还没有稳定/停止
+
+                tmp_bat_val += 160;
             }
             else if (adc_bat_val <= 3056) // 如果检测电池电压小于 7.0V
             {
-                // tmp_bat_val = (adc_bat_val + 18);
-                tmp_bat_val = (adc_bat_val + 27);
+                // tmp_bat_val = (adc_bat_val + 27);
+                // tmp_bat_val += 27;
+                // tmp_bat_val += 50;
+                // tmp_bat_val += 250; // 0.8-0.9A
+                // tmp_bat_val += 255;
+                // tmp_bat_val += 280;
+                // tmp_bat_val += 290; // ================= 只有600mA
+                // tmp_bat_val += 300;
+                // tmp_bat_val += 320; // 6.73V，650mA
+                // tmp_bat_val += 350; // 1.16A附近
+                // tmp_bat_val += 380; // 平均在1.26A~1.3A
+
+                tmp_bat_val += 150;
             }
             else if (adc_bat_val <= 3188) // 如果检测电池电压小于 7.3V
             {
-                // tmp_bat_val = (adc_bat_val + 9);
-                tmp_bat_val = (adc_bat_val + 16);
+                // tmp_bat_val = (adc_bat_val + 16);
+                // tmp_bat_val += 16;
+
+                tmp_bat_val += 50;
+
+                // tmp_bat_val += 106;
+                // tmp_bat_val += 120; // 1.05A
+                // tmp_bat_val += 140; //
+                // tmp_bat_val += 160; //
+                // tmp_bat_val += 200; //
+                // tmp_bat_val += 220; //
+                // tmp_bat_val += 240; //
+                // tmp_bat_val += 250; // 换成220的电感后,测得7.03V只有0.71A
+                // tmp_bat_val += 260; //
             }
             else if (adc_bat_val <= 3326) // 如果检测电池电压小于 7.62V
             {
                 // tmp_bat_val = (adc_bat_val + 0);
-                tmp_bat_val = (adc_bat_val + 0);
-                // tmp_bat_val = (u32)adc_bat_val + (294 - (u32)adc_bat_val * 157 / 1000);
+                // tmp_bat_val = (adc_bat_val + 0);
+                // tmp_bat_val += 90; // 1.05A
+                // tmp_bat_val += 110;
+                // tmp_bat_val += 130;
+                // tmp_bat_val += 170;
+                // tmp_bat_val += 190;
+                // tmp_bat_val += 200; // // 换成220的电感后,测得7.39V只有0.57A
+                // tmp_bat_val += 210;
             }
             else // 如果在充电时检测到电池电压大于
             // else if (adc_bat_val <= 3580) // 小于8.2V
@@ -1173,57 +1211,18 @@ void main(void)
                 // 如果检测电池的分压电阻是 220K / 1M，充电电流在0.9A-1A
                 // tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 294);
 
-                tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 522);
+                // tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 522);
+                tmp_bat_val -= ((u32)adc_bat_val * 157 / 1000 - 522) + 200;
+                // tmp_bat_val -= ((u32)adc_bat_val * 157 / 1000 - 722);
             }
-            // else // 如果电池电压大于8.2V，降低电流
-            // {
-            // // tmp_bat_val = (adc_bat_val + 10);
-            // }
 
-            // tmp_bat_val += 30;
-            // tmp_bat_val += 32;
-            // tmp_bat_val += 52; //
-            // tmp_bat_val += 33; // 1.3A(7361芯片)
-
-            // 用7351芯片,充电电流 0.89-0.90A
-            // 7361,0.83-0.84A
-            // tmp_bat_val += 27; //
-
-            // 7361,0.84-0.85A
-            // tmp_bat_val += 30;
-
-            // 7361,0.9A
-            // tmp_bat_val += 33;
-
-            // 7361,0.95A
-            // tmp_bat_val += 40;
-
-            // 7361,0.98A-1.0A
-
-            // tmp_bat_val += 30;
-            // tmp_bat_val += 40; // 1.07、1.08A
-            // tmp_bat_val += 42;
-            // tmp_bat_val += 44;
-
-            // tmp_bat_val += 45; // 1.07
-
-            // tmp_bat_val += 47; // 1.12、但是后续会到1.2
-            // tmp_bat_val += 50; // 1.15A、1.2
-            // tmp_bat_val += 55;
-            // tmp_bat_val += 60; // 1.1
-            // tmp_bat_val += 65; // 1.1
-
-            // tmp_bat_val += 120; //
-            // tmp_bat_val += 250; //
+            // tmp_bat_val += 200; //
+            tmp_bat_val += 230; //
             // tmp_bat_val += 350; //
             // tmp_bat_val += 400; //
 
-            {
-                // if (tmp_bat_val > 90)
-                tmp_bat_val -= 90;
-            }
-
-            if (adc_bat_val >= 3579) // 8.2V及以上 , 降低电流
+            // if (adc_bat_val >= 3579) // 8.2V及以上 , 降低电流
+            if (adc_bat_val >= 3623) // 8.30V及以上 , 降低电流
             {
                 // tmp_bat_val -= 30; // 830mA
                 // tmp_bat_val -= 40; // 760mA
@@ -1231,10 +1230,11 @@ void main(void)
                 // tmp_bat_val -= 80;
                 u16 i;
 
-                // for (i = 0; i < 220; i++) // 660mA
+                for (i = 0; i < 260; i++) //
+                // for (i = 0; i < 220; i++) // 660mA       --- 在客户那里测试是800
                 // for (i = 0; i < 300; i++) // 610mA
                 // for (i = 0; i < 400; i++) // 550mA
-                for (i = 0; i < 450; i++) //
+                // for (i = 0; i < 450; i++) // 500？    --- 实际测试是600
                 {
                     if (tmp_bat_val > 2)
                     {
@@ -1242,22 +1242,7 @@ void main(void)
                     }
                 }
             }
-
 #endif
-
-            // for (i = 0; i < ARRAY_SIZE(bat_val_fix_table); i++)
-            // {
-            //     if (adc_bat_val <= bat_val_fix_table[i].adc_bat_val)
-            //     {
-            //         tmp_bat_val = (adc_bat_val + bat_val_fix_table[i].tmp_bat_val_fix);
-            //         break;
-            //     }
-
-            //     if (i == (ARRAY_SIZE(bat_val_fix_table) - 1))
-            //     {
-            //         tmp_bat_val = (u32)adc_bat_val - ((u32)adc_bat_val * 157 / 1000 - 522) + TMP_BAT_VAL_FIX;
-            //     }
-            // }
 
             /*
                 升压公式：Vo = Vi / (1 - D)
@@ -1334,8 +1319,6 @@ void main(void)
                     }
                 }
             }
-
-#endif // 使用计算的方式来控制充电电流
 
 #if 0 // 使用检测充电前后电池电压变化的差值来控制充电电流
 

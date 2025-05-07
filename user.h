@@ -65,9 +65,10 @@
 // #define ADCDETECT_BAT_FULL (3613) // 计算得出是8.27V， 是在3666的基础上减去一定值（补偿）,实际测得是8.36V
 // #define ADCDETECT_BAT_FULL (3626) //  实际测试是8.37
 // #define ADCDETECT_BAT_FULL (3639) //  实际测试是8.39V
-#define ADCDETECT_BAT_FULL (3642) //  实际测试是 V
+#define ADCDETECT_BAT_FULL (3642) //  计算是8.34V, 实际测试是8.40 V
 // #define ADCDETECT_BAT_FULL (3644) //  实际测试是8.41V
 // #define ADCDETECT_BAT_FULL (3647) //  实际测试是 8.41V
+// #define ADCDETECT_BAT_FULL (3666) // 3666.90,计算是8.40V
 #define ADCDETECT_BAT_NULL_EX (280)
 #define ADCDETECT_BAT_WILL_FULL (3472) // (1958)
 #define ADCVAL_REF_BAT_6_0_V (2618)	   // (1477)
@@ -290,7 +291,7 @@ volatile u32 shut_down_ms_cnt; // 毫秒计数(用于运行15min后自动关机)
 volatile u32 adc_bat_val;	   // 存放检测到的电池电压的adc值
 volatile u16 adc_charging_val; // 存放检测到的充电电压的adc值
 
-volatile u16 adc_initial_charging_val; // 存放初始的充电电压
+// volatile u16 adc_initial_charging_val; // 存放初始的充电电压
 
 volatile u32 max_pwm_val;	   // 临时存放最大占空比对应的值
 volatile u16 last_pwm_val;	   // 记录之前的pwm占空比的值
