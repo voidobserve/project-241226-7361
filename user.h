@@ -364,6 +364,8 @@ volatile bit_flag flag3;
 
 #define flag_is_update_current flag3.bits.bit5 // 是否到了更新充电电流的时间
 
+#define flag_is_adjust_pwm_time_comes flag3.bits.bit6 // 是否到了调节控制充电的PWM的时间
+
 // 毫秒级延时 (误差：在1%以内，1ms、10ms、100ms延时的误差均小于1%)
 // 前提条件：FCPU = FHOSC / 4
 void delay_ms(u16 xms)
