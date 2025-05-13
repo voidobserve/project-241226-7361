@@ -1146,25 +1146,37 @@ void main(void)
             tmp_bat_val = adc_bat_val;
             if (adc_bat_val <= 2837) // 如果检测电池电压小于 6.5V
             {
-                tmp_bat_val += 30;
+                // tmp_bat_val += 30;
+                tmp_bat_val += 70;
             }
             else if (adc_bat_val <= 3056) // 如果检测电池电压小于 7.0V
             {
-                tmp_bat_val += 30; //
+                // tmp_bat_val += 30; //
+                tmp_bat_val += 70;
             }
             else if (adc_bat_val <= 3188) // 如果检测电池电压小于 7.3V
             {
-                tmp_bat_val += 20; //
+                // tmp_bat_val += 20; //
+                tmp_bat_val += 60; // 测试 7.2V，电流可以在1.1A以下，不超过1.1A
             }
             else if (adc_bat_val <= 3326) // 如果检测电池电压小于 7.62V
             {
-                tmp_bat_val += 10; //
+                // tmp_bat_val += 10; //
+                tmp_bat_val += 40; //
             }
             else // 如果在充电时检测到电池电压大于
             {
-                tmp_bat_val += 30; //
+                // tmp_bat_val += 15; /* 这个时候常态下可能只有0.97，但是动一下线路板或者线缆，会跳到1.07A */
+                // tmp_bat_val += 25; //
+                // tmp_bat_val += 30; //
                 // tmp_bat_val += 35; //
-                // tmp_bat_val += 40; //
+                tmp_bat_val += 40; // 8.07V -- 1.06A    
+                // tmp_bat_val += 45; //
+                // tmp_bat_val += 50; // 在8.08V会到1.10
+                // tmp_bat_val += 52; //
+                // tmp_bat_val += 55; //
+                // tmp_bat_val += 60; //   超过8V会到1.10
+                // tmp_bat_val += 70; // 超过8V时会超过1.1A，导致电感发热
                 tmp_bat_val -= ((u32)adc_bat_val * 157 / 1000 - 522);
             }
 
