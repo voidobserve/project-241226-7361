@@ -290,9 +290,6 @@ volatile u32 shut_down_ms_cnt; // 毫秒计数(用于运行15min后自动关机)
 
 volatile u32 adc_bat_val;	   // 存放检测到的电池电压的adc值
 volatile u16 adc_charging_val; // 存放检测到的充电电压的adc值
-
-// volatile u16 adc_initial_charging_val; // 存放初始的充电电压
-
 volatile u32 max_pwm_val;	   // 临时存放最大占空比对应的值
 volatile u16 last_pwm_val;	   // 记录之前的pwm占空比的值
 volatile u16 tmp_val;		   // 临时存放需要调节的占空比对应的值
