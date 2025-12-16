@@ -546,6 +546,8 @@ void key_event_handle(void)
             // 关闭 正转和反转的PWM
             PWM0EC = 0;
             PWM1EC = 0;
+
+            inflation_ctl_status = INFLATION_CTL_STATUS_DEFLATION; // 放气
         }
         else if (KEY_EVENT_MODE_PRESS == key_event)
         {
@@ -625,6 +627,8 @@ void key_event_handle(void)
             // PWM0EC = 1;
 
             PWM1EC = 1;
+
+            inflation_ctl_status = INFLATION_CTL_STATUS_INFLATION; // 充气
         }
     }
 
@@ -773,6 +777,8 @@ void adc_scan_handle(void)
                 // 关闭 正转和反转的PWM
                 PWM0EC = 0;
                 PWM1EC = 0;
+
+                inflation_ctl_status = INFLATION_CTL_STATUS_DEFLATION; // 放气
             }
         }
 
@@ -869,6 +875,7 @@ void adc_scan_handle(void)
                 // 关闭 正转和反转的PWM
                 PWM0EC = 0;
                 PWM1EC = 0;
+                inflation_ctl_status = INFLATION_CTL_STATUS_DEFLATION; // 放气
 
                 flag_is_low_battery = 0; // 清除该标志位
                 break;
@@ -912,16 +919,16 @@ void turn_dir_scan_handle(void)
             if (0 == FLAG_DIR)
             {
                 PWM1EC = 0;
-                delay_ms(1000);
+                delay_ms(1000); // 电机状态切换需要延时等待放电，否则会拉住电机，无法驱动
                 PWM0EC = 1;
                 FLAG_DIR = 1; //
             }
             else
             {
-                PWM0EC = 0; //
-                delay_ms(1000);
-                PWM1EC = 1;   //
-                FLAG_DIR = 0; //
+                PWM0EC = 0;     //
+                delay_ms(1000); // 电机状态切换需要延时等待放电，否则会拉住电机，无法驱动
+                PWM1EC = 1;     //
+                FLAG_DIR = 0;   //
             }
 
             flag_ctl_dir = 0;
@@ -954,6 +961,8 @@ void shutdown_scan_handle(void)
             PWM1EC = 0;
 
             FLAG_IS_DEVICE_OPEN = 0;
+
+            inflation_ctl_status = INFLATION_CTL_STATUS_DEFLATION; // 放气
         }
     }
     else
@@ -966,10 +975,12 @@ void shutdown_scan_handle(void)
 void low_power_scan_handle(void)
 {
     // if (FLAG_DURING_CHARGING_BAT_IS_NULL)
-    if (FLAG_DURING_CHARGING_BAT_IS_NULL || // 只插着充电器且没有电池时，不进入低功耗
-        FLAG_IS_DEVICE_OPEN ||              // 如果设备已经启动，不进入低功耗
-        FLAG_IS_IN_CHARGING ||              // 如果正在充电，不进入低功耗，因为还需要输出PWM来控制充电
-        (0 == P01D))                        // 如果检测到 开关/模式 按键按下，不进入低功耗(交给按键事件处理函数来判断是否要开机)
+    if (FLAG_DURING_CHARGING_BAT_IS_NULL ||               // 只插着充电器且没有电池时，不进入低功耗
+        FLAG_IS_DEVICE_OPEN ||                            // 如果设备已经启动，不进入低功耗
+        FLAG_IS_IN_CHARGING ||                            // 如果正在充电，不进入低功耗，因为还需要输出PWM来控制充电
+        (0 == P01D) ||                                    // 如果检测到 开关/模式 按键按下，不进入低功耗(交给按键事件处理函数来判断是否要开机)
+        INFLATION_CTL_STATUS_NONE != inflation_ctl_status // 气泵、气阀还在工作，不进入低功耗
+    )
     {
         return;
     }
@@ -1171,11 +1182,11 @@ void main(void)
             }
             else // 如果在充电时检测到电池电压大于
             {
-                /* 
-                    tmp_bat_val += 15;  这个时候常态下可能只有0.97，但是动一下线路板或者线缆，会跳到1.07A 
-                    7.76--0.975，7.78--1.04，8.00--1.084    
+                /*
+                    tmp_bat_val += 15;  这个时候常态下可能只有0.97，但是动一下线路板或者线缆，会跳到1.07A
+                    7.76--0.975，7.78--1.04，8.00--1.084
                 */
-                tmp_bat_val += 15; 
+                tmp_bat_val += 15;
                 // tmp_bat_val += 25; //
                 // tmp_bat_val += 30; // 7.70--1.06，7.73--1.100，
                 // tmp_bat_val += 35; //
@@ -1189,8 +1200,9 @@ void main(void)
                 tmp_bat_val -= ((u32)adc_bat_val * 157 / 1000 - 522);
             }
 
+            tmp_bat_val += 50;
             // tmp_bat_val += 70;
-            tmp_bat_val += 80;
+            // tmp_bat_val += 80; // ==========
             // tmp_bat_val += 90;
 
             // if (adc_bat_val >= 3579) // 8.2V及以上 , 降低电流
@@ -1551,6 +1563,32 @@ void int_isr(void) __interrupt
                     {
                         cnt = 0;
                         flag_is_adjust_pwm_time_comes = 1;
+                    }
+                }
+
+                {
+                    static u16 cnt = 0;
+                    cnt++;
+                    if (INFLATION_CTL_STATUS_NONE == inflation_ctl_status)
+                    {
+                        cnt = 0;
+                        INFLATION_CTL_OFF();
+                        DEFLATION_CTL_OFF();
+                    }
+                    else if (INFLATION_CTL_STATUS_INFLATION == inflation_ctl_status)
+                    {
+                        DEFLATION_CTL_OFF();
+                        INFLATION_CTL_ON();
+                    }
+                    else if (INFLATION_CTL_STATUS_DEFLATION == inflation_ctl_status)
+                    {
+                        INFLATION_CTL_OFF();
+                        DEFLATION_CTL_ON();
+                    }
+
+                    if (cnt >= (u16)10000)
+                    {
+                        inflation_ctl_status = INFLATION_CTL_STATUS_NONE;
                     }
                 }
             }

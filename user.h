@@ -55,6 +55,19 @@
 // USE_7351_CHIP
 #define USE_7351_CHIP
 
+/*
+	定义控制充气和放气的引脚
+	inflation and deflation
+*/
+#define INFLATION_CTL_PIN P13D  // P13D 4脚
+#define DEFLATION_CTL_PIN P03D // P03D 10脚
+
+#define INFLATION_CTL_ON() (INFLATION_CTL_PIN = 1)
+#define INFLATION_CTL_OFF() (INFLATION_CTL_PIN = 0)
+
+#define DEFLATION_CTL_ON() (DEFLATION_CTL_PIN = 1)
+#define DEFLATION_CTL_OFF() (DEFLATION_CTL_PIN = 0)
+
 #define ADCDETECT_CHARING_THRESHOLD 2048 // 检测是否充电的adc值
 
 #define BAT_FIX_VAL (1773 / 1000)
@@ -112,29 +125,28 @@
 // #define TMP_BAT_VAL_FIX 55 // 额外固定增益
 
 /*
-    充电时的电池电压ad值和未充电时电池电压ad值，他们之前的ad值差值
+	充电时的电池电压ad值和未充电时电池电压ad值，他们之前的ad值差值
 
-	检测电池电压 1M上拉、470K下拉 
-    检测电池电压的分压系数 == 470K / (470K + 1M)
-    约为 0.31972789115646258503401360544218
+	检测电池电压 1M上拉、470K下拉
+	检测电池电压的分压系数 == 470K / (470K + 1M)
+	约为 0.31972789115646258503401360544218
 
-    如果用内部 3 V参考电压，12位精度（0-4096），
-    那么 1单位ad值 相当于电池电池电压：
-    0.00229076628989361702127659574468  V 
+	如果用内部 3 V参考电压，12位精度（0-4096），
+	那么 1单位ad值 相当于电池电池电压：
+	0.00229076628989361702127659574468  V
 */
 // #define ADC_BAT_DIFF_VAL (55) // 测得充电时 xxA
-// #define ADC_BAT_DIFF_VAL (65) // 
-// #define ADC_BAT_DIFF_VAL (75) // 
+// #define ADC_BAT_DIFF_VAL (65) //
+// #define ADC_BAT_DIFF_VAL (75) //
 
-#define ADC_BAT_DIFF_VAL (100) // 
-// #define ADC_BAT_DIFF_VAL (105) // 
+#define ADC_BAT_DIFF_VAL (100) //
+// #define ADC_BAT_DIFF_VAL (105) //
 // #define ADC_BAT_DIFF_VAL (110) // 1.0-1.3AX
 
-// #define ADC_BAT_DIFF_VAL (120) // 
-// #define ADC_BAT_DIFF_VAL (130) // 
+// #define ADC_BAT_DIFF_VAL (120) //
+// #define ADC_BAT_DIFF_VAL (130) //
 #define WAIT_CIRCUIT_STABLIZE_TIMES (5) // 等待电路稳定时间,单位:ms
 // #define WAIT_CIRCUIT_STABLIZE_TIMES (10) // 等待电路稳定时间
-
 
 // struct tmp_bat_val_fix
 // {
@@ -295,12 +307,20 @@ volatile u16 last_pwm_val;	   // 记录之前的pwm占空比的值
 volatile u16 tmp_val;		   // 临时存放需要调节的占空比对应的值
 volatile u16 tmp_val_l[8];
 volatile u8 tmp_val_cnt;
-volatile u8 flag_bat_is_empty; // 标志位，用于检测是否拔出了电池
+// volatile u8 flag_bat_is_empty; // 标志位，用于检测是否拔出了电池
 
 volatile u16 tmp_bat_val;	   // 存放检测到的电池电压+计算的压差对应的adc值
 volatile u8 over_charging_cnt; // 在充电时，检测电池是否满电的计数值
 volatile u8 full_charge_cnt;   // 检测到充满电后，进行计数的变量
 //
+
+enum
+{
+	INFLATION_CTL_STATUS_NONE = 0,
+	INFLATION_CTL_STATUS_INFLATION, // 充气
+	INFLATION_CTL_STATUS_DEFLATION, // 放气
+};
+volatile u8 inflation_ctl_status; // 控制充气、放气的状态机
 
 // 定义变量
 #define PWM_MAX_LEVEL 100 // PWM等级数（亮度级别）
@@ -362,6 +382,8 @@ volatile bit_flag flag3;
 #define flag_is_update_current flag3.bits.bit5 // 是否到了更新充电电流的时间
 
 #define flag_is_adjust_pwm_time_comes flag3.bits.bit6 // 是否到了调节控制充电的PWM的时间
+
+#define flag_bat_is_empty flag3.bits.bit7 // 标志位，用于检测是否拔出了电池
 
 // 毫秒级延时 (误差：在1%以内，1ms、10ms、100ms延时的误差均小于1%)
 // 前提条件：FCPU = FHOSC / 4
