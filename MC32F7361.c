@@ -293,18 +293,20 @@ void Sys_Init(void)
         PDP1 = 0x00;   // io口下拉电阻   1:enable  0:disable
         P1ADCR = 0x00; // io类型选择  1:模拟输入  0:通用io
 
-        IOP2 = 0x00; // io口数据位
-        OEP2 = 0xFF; // io口方向 1:out  0:in
-        PUP2 = 0x00; // io口上拉电阻   1:enable  0:disable
-        PDP2 = 0x00; // io口下拉电阻   1:enable  0:disablea
+        // IOP2 = 0x00; // io口数据位
+        // OEP2 = 0xFF; // io口方向 1:out  0:in
+        // PUP2 = 0x00; // io口上拉电阻   1:enable  0:disable
+        // PDP2 = 0x00; // io口下拉电阻   1:enable  0:disablea
 
         PMOD = 0x00;  // P00、P01、P13 io端口值从寄存器读，推挽输出
         DRVCR = 0x80; // 普通驱动
     }
     // 关闭所有指示灯
     LED_WORKING_OFF();
-    LED_FULL_CHARGE_OFF();
+    // LED_FULL_CHARGE_OFF();
     LED_CHARGING_OFF();
+    INFLATION_CTL_OFF();
+    DEFLATION_CTL_OFF();
 
     // timer0_pwm_config();
     {
@@ -577,6 +579,8 @@ void key_event_handle(void)
                 PWM0EC = 0;
                 PWM1EC = 0;
                 mode_flag = MODE_4;
+
+                inflation_ctl_status = INFLATION_CTL_STATUS_DEFLATION; // 放气
             }
             else if (MODE_4 == mode_flag)
             {
@@ -586,6 +590,8 @@ void key_event_handle(void)
                 T1DATA = 150;
                 mode_flag = MODE_1;
                 flag_ctl_dir = 1;
+
+                inflation_ctl_status = INFLATION_CTL_STATUS_INFLATION; // 充气
             }
 
             turn_dir_ms_cnt = 0; // 重置切换方向的计数
@@ -613,9 +619,9 @@ void key_event_handle(void)
         // 如果设备没有在运行
         if (KEY_EVENT_MODE_HOLD == key_event && 0 == FLAG_IS_IN_CHARGING)
         {
-            LED_FULL_CHARGE_OFF(); // 关闭满电指示灯
-            LED_CHARGING_OFF();    // 关闭充电指示灯
-            LED_WORKING_ON();      // 打开电源指示灯
+            // LED_FULL_CHARGE_OFF(); // 关闭满电指示灯
+            LED_CHARGING_OFF(); // 关闭充电指示灯
+            LED_WORKING_ON();   // 打开电源指示灯
             FLAG_IS_DEVICE_OPEN = 1;
 
             // 设定正转、反转的PWM的初始占空比
@@ -681,7 +687,7 @@ void adc_scan_handle(void)
                 PWM2EC = 0;         // 关闭控制升压电路的pwm（建议是，插上充钱器时，不关闭控制升压电路的PWM，但是在测试时，充电一侧会严重发热）
                 T2DATA = 0;
                 FLAG_BAT_IS_NEED_CHARGE = 0;
-                FLAG_DURING_CHARGING_BAT_IS_NULL = 1; // 标志位置一，在主循环让绿灯快闪
+                // FLAG_DURING_CHARGING_BAT_IS_NULL = 1; // 标志位置一，在主循环让绿灯快闪
 #endif
                 break;
             }
@@ -710,7 +716,7 @@ void adc_scan_handle(void)
             {
                 // 如果在充电，且电池需要充电（电池电量小于 ADCDETECT_BAT_WILL_FULL，电池将要满电的电压）
                 // 根据当前的电池电压来决定要输出多大的PWM，电池电压越小，PWM占空比也要小，否则充电电流会过大
-                LED_FULL_CHARGE_OFF(); // 关闭充满电的指示灯
+                // LED_FULL_CHARGE_OFF(); // 关闭充满电的指示灯
                 FLAG_BAT_IS_NEED_CHARGE = 1;
                 FLAG_BAT_IS_FULL = 0;
                 break;
@@ -821,10 +827,10 @@ void adc_scan_handle(void)
                 LED_CHARGING_OFF(); // 关闭充电指示灯
                 PWM2EC = 0;         // 关闭控制升压电路的pwm
                 T2DATA = 0;
-                LED_FULL_CHARGE_OFF(); // 关闭电池充满电的指示灯
-                LED_WORKING_OFF();     // 关闭电池充满电的指示灯（白灯）
+                // LED_FULL_CHARGE_OFF(); // 关闭电池充满电的指示灯
+                LED_WORKING_OFF(); // 关闭电池充满电的指示灯（白灯）
 
-                FLAG_DURING_CHARGING_BAT_IS_NULL = 0; // 清空该标志位，因为已经不在充电的情况下
+                // FLAG_DURING_CHARGING_BAT_IS_NULL = 0; // 清空该标志位，因为已经不在充电的情况下
                 break;
             } // if (cnt >= 8)
 
@@ -839,7 +845,7 @@ void adc_scan_handle(void)
                 else
                 {
                     // 如果未满电
-                    LED_FULL_CHARGE_OFF();
+                    // LED_FULL_CHARGE_OFF();
                     LED_WORKING_OFF();
                     // LED_CHARGING_ON();
                 }
@@ -866,7 +872,7 @@ void adc_scan_handle(void)
                 // LED_CHARGING_ON(); // 开启充电指示灯
                 // T2DATA = 0;
                 PWM2EC = 1; // 开启控制升压电路的pwm
-                LED_FULL_CHARGE_OFF();
+                // LED_FULL_CHARGE_OFF();
                 LED_WORKING_OFF(); // 关闭电源指示灯
                 HEATING_OFF();     // 关闭加热
                 FLAG_IS_DEVICE_OPEN = 0;
@@ -975,7 +981,8 @@ void shutdown_scan_handle(void)
 void low_power_scan_handle(void)
 {
     // if (FLAG_DURING_CHARGING_BAT_IS_NULL)
-    if (FLAG_DURING_CHARGING_BAT_IS_NULL ||               // 只插着充电器且没有电池时，不进入低功耗
+    if (
+        // FLAG_DURING_CHARGING_BAT_IS_NULL ||               // 只插着充电器且没有电池时，不进入低功耗
         FLAG_IS_DEVICE_OPEN ||                            // 如果设备已经启动，不进入低功耗
         FLAG_IS_IN_CHARGING ||                            // 如果正在充电，不进入低功耗，因为还需要输出PWM来控制充电
         (0 == P01D) ||                                    // 如果检测到 开关/模式 按键按下，不进入低功耗(交给按键事件处理函数来判断是否要开机)
@@ -1019,7 +1026,9 @@ label:
 
     LED_WORKING_OFF();
     LED_CHARGING_OFF();
-    LED_FULL_CHARGE_OFF();
+    // LED_FULL_CHARGE_OFF();
+    INFLATION_CTL_OFF();
+    DEFLATION_CTL_OFF();
 
     // 开关/模式按键的配置，配置为输入上拉
     P01PU = 1;
@@ -1097,7 +1106,7 @@ void main(void)
         if (adc_val >= ADCDETECT_BAT_FULL + ADCDETECT_BAT_NULL_EX)
         {
             flag_bat_is_empty = 1;
-            FLAG_DURING_CHARGING_BAT_IS_NULL = 1; // 标志位置一，在主循环让绿灯快闪
+            // FLAG_DURING_CHARGING_BAT_IS_NULL = 1; // 标志位置一，在主循环让绿灯快闪
         }
     }
     PWM2EC = 0; // 关闭控制升压电路的pwm
@@ -1338,74 +1347,20 @@ void main(void)
                 }
             }
 
-#if 0 // 使用检测充电前后电池电压变化的差值来控制充电电流
-
-            u16 adc_bat_val_when_charging;     // 充电时的电池电压
-            u16 adc_bat_val_when_not_charging; // 未充电时的电池电压
-            u8 adjust_pwm_val_dir;             // 调整方向
-
-            if (flag_is_update_current)
-            {                
-                flag_is_update_current = 0;
-                PWM2EC = 1; // 使能升压的PWM
-                delay_ms(WAIT_CIRCUIT_STABLIZE_TIMES);
-                adc_sel_pin(ADC_PIN_P02_AN1);
-                adc_bat_val_when_charging = adc_get_val();
-
-                PWM2EC = 0; // 不使能升压的PWM
-                delay_ms(WAIT_CIRCUIT_STABLIZE_TIMES);
-                adc_bat_val_when_not_charging = adc_get_val();
-
-                if (adc_bat_val_when_charging > adc_bat_val_when_not_charging) /* 如果充电时，测得的ad值比没有充电时的ad值大 */
-                {
-                    if ((adc_bat_val_when_charging - adc_bat_val_when_not_charging) > ADC_BAT_DIFF_VAL) /* 如果充电时和没有充电时的差值大于设定的差值 */
-                    {
-                        adjust_pwm_val_dir = 0;
-                    }
-                    else
-                    {
-                        adjust_pwm_val_dir = 1;
-                    }
-                }
-                else
-                {
-                    adjust_pwm_val_dir = 1;
-                }
-
-                if (adjust_pwm_val_dir)
-                {
-                    if (last_pwm_val < max_pwm_val)
-                    {
-                        last_pwm_val++;
-                    }
-                }
-                else
-                {
-                    if (last_pwm_val >= 1)
-                    {
-                        last_pwm_val--;
-                    }
-                }
-            }
-
-            PWM2EC = 1; // 使能升压的PWM
-
-#endif // 使用检测充电前后电池电压变化的差值来控制充电电流
-
             T2DATA = last_pwm_val;
 
         } // if (FLAG_IS_IN_CHARGING)
-        else // 如果未在充电
-        {
-            if (FLAG_DURING_CHARGING_BAT_IS_NULL)
-            {
-                // 如果电池未安装
-                LED_FULL_CHARGE_ON();
-                delay_ms(200);
-                LED_FULL_CHARGE_OFF();
-                delay_ms(200);
-            }
-        } // else // 如果未在充电
+        // else // 如果未在充电
+        // {
+        //     if (FLAG_DURING_CHARGING_BAT_IS_NULL)
+        //     {
+        //         // 如果电池未安装
+        //         LED_FULL_CHARGE_ON();
+        //         delay_ms(200);
+        //         LED_FULL_CHARGE_OFF();
+        //         delay_ms(200);
+        //     }
+        // } // else // 如果未在充电
 
         if (flag_is_low_battery)
         {
@@ -1534,7 +1489,7 @@ void int_isr(void) __interrupt
                     else
                     {
                         shut_down_bat_cnt = 0;
-                        flag_is_needed_shut_down = 0;
+                        // flag_is_needed_shut_down = 0;
                     }
                 } // 关机电量检测
 
@@ -1549,10 +1504,10 @@ void int_isr(void) __interrupt
                             flag_is_update_current = 1;
                         }
                     }
-                    else
-                    {
-                        FLAG_IS_IN_CHARGING = 0;
-                    }
+                    // else
+                    // {
+                    //     // FLAG_IS_IN_CHARGING = 0;
+                    // }
 
                 } // 充电时，调节电流时间间隔控制
 
@@ -1567,26 +1522,41 @@ void int_isr(void) __interrupt
                 }
 
                 {
-                    static u16 cnt = 0;
+                    static volatile u16 cnt = 0;
                     cnt++;
-                    if (INFLATION_CTL_STATUS_NONE == inflation_ctl_status)
+                    switch (inflation_ctl_status)
+                    {
+                    case INFLATION_CTL_STATUS_NONE:
                     {
                         cnt = 0;
                         INFLATION_CTL_OFF();
                         DEFLATION_CTL_OFF();
                     }
-                    else if (INFLATION_CTL_STATUS_INFLATION == inflation_ctl_status)
+                    break;
+                    // ============================================================
+                    case INFLATION_CTL_STATUS_INFLATION:
                     {
+                        // 刚进入充气状态，清空计数值，让计数重新开始
+                        cnt = 0;
                         DEFLATION_CTL_OFF();
                         INFLATION_CTL_ON();
+                        inflation_ctl_status = INFLATION_CTL_STATUS_INFLATION_HANDLING;
                     }
-                    else if (INFLATION_CTL_STATUS_DEFLATION == inflation_ctl_status)
+                    break;
+                    // ============================================================
+                    case INFLATION_CTL_STATUS_DEFLATION:
                     {
+                        // 刚进入充气状态，清空计数值，让计数重新开始
+                        cnt = 0;
                         INFLATION_CTL_OFF();
                         DEFLATION_CTL_ON();
+                        inflation_ctl_status = INFLATION_CTL_STATUS_DEFLATION_HANDLING;
+                    }
+                    break;
+                        // ============================================================
                     }
 
-                    if (cnt >= (u16)10000)
+                    if (cnt >= (u16)15000)
                     {
                         inflation_ctl_status = INFLATION_CTL_STATUS_NONE;
                     }

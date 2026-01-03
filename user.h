@@ -59,8 +59,8 @@
 	定义控制充气和放气的引脚
 	inflation and deflation
 */
-#define INFLATION_CTL_PIN P13D  // P13D 4脚
-#define DEFLATION_CTL_PIN P03D // P03D 10脚
+#define INFLATION_CTL_PIN P03D // P03D 10脚
+#define DEFLATION_CTL_PIN P13D // P13D 4脚
 
 #define INFLATION_CTL_ON() (INFLATION_CTL_PIN = 1)
 #define INFLATION_CTL_OFF() (INFLATION_CTL_PIN = 0)
@@ -199,7 +199,7 @@ volatile u8 key_event; // 存放按键事件的变量
 // 驱动指示灯的引脚定义
 #define LED_WORKING_PIN P14D	 // 工作指示灯
 #define LED_CHARGING_PIN P04D	 // 充电指示灯
-#define LED_FULL_CHARGE_PIN P03D // 满电指示灯
+// #define LED_FULL_CHARGE_PIN P03D // 满电指示灯
 #define LED_RED					 // 红灯
 #define LED_GREEN				 // 绿灯
 #define LED_BLUE				 // 蓝灯
@@ -236,20 +236,20 @@ volatile u8 key_event; // 存放按键事件的变量
 			LED_CHARGING_PIN = LED_OFF; \
 		} while (0);                    \
 	}
-#define LED_FULL_CHARGE_ON()              \
-	{                                     \
-		do                                \
-		{                                 \
-			LED_FULL_CHARGE_PIN = LED_ON; \
-		} while (0);                      \
-	}
-#define LED_FULL_CHARGE_OFF()              \
-	{                                      \
-		do                                 \
-		{                                  \
-			LED_FULL_CHARGE_PIN = LED_OFF; \
-		} while (0);                       \
-	}
+// #define LED_FULL_CHARGE_ON()              \
+// 	{                                     \
+// 		do                                \
+// 		{                                 \
+// 			LED_FULL_CHARGE_PIN = LED_ON; \
+// 		} while (0);                      \
+// 	}
+// #define LED_FULL_CHARGE_OFF()              \
+// 	{                                      \
+// 		do                                 \
+// 		{                                  \
+// 			LED_FULL_CHARGE_PIN = LED_OFF; \
+// 		} while (0);                       \
+// 	}
 /*实际测得给高电平为加热*/
 #define HEATING_ON()              \
 	{                             \
@@ -312,15 +312,21 @@ volatile u8 tmp_val_cnt;
 volatile u16 tmp_bat_val;	   // 存放检测到的电池电压+计算的压差对应的adc值
 volatile u8 over_charging_cnt; // 在充电时，检测电池是否满电的计数值
 volatile u8 full_charge_cnt;   // 检测到充满电后，进行计数的变量
-//
+
+
 
 enum
 {
 	INFLATION_CTL_STATUS_NONE = 0,
 	INFLATION_CTL_STATUS_INFLATION, // 充气
 	INFLATION_CTL_STATUS_DEFLATION, // 放气
+
+	INFLATION_CTL_STATUS_INFLATION_HANDLING, // 正在处理充气
+	INFLATION_CTL_STATUS_DEFLATION_HANDLING, // 正在处理放气
 };
 volatile u8 inflation_ctl_status; // 控制充气、放气的状态机
+// volatile u16 inflation_cnt;
+// volatile u16 deflation_cnt;
 
 // 定义变量
 #define PWM_MAX_LEVEL 100 // PWM等级数（亮度级别）
